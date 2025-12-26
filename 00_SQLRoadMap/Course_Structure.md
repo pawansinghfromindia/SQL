@@ -169,4 +169,4 @@ We will see 3 types of projects of real learning
     
 - Advanced Data Analytics Project
 
-[Prev]() [Next]()
+[Prev]() [Introduction to SQL>](https://github.com/pawansinghfromindia/SQL/blob/main/01_Introduction/intro.md)
