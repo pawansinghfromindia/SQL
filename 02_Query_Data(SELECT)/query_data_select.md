@@ -58,7 +58,7 @@ Let's start with two clauses that makes the simplest query in SQL : ```SELECT```
 
 Syntax :
 ```sql
-   SELECT * FROM Table_Name;
+   SELECT * FROM table_Name;
 ```
 Once you execute the SQL Command, what's going to happen is First SQL execute ```FROM``` clause, then ```SELECT``` which columns to keep in results.
 
@@ -113,17 +113,95 @@ Note : No comma (,) after the last column otherwise syntax error.
 
 <!------------------------------------->
 
-## ```WHERE``` Clause in order to filter the data
+## ```WHERE``` Clause | filter the data
 
+We use ```WHERE``` Clause in order to filter our data based on condition. 
+The data which fulfill the given condition are going to stay in fetched output result and the data which don't meet the condition will be filter out from the results.
 
+Syntax :
+```sql
+       SELECT *
+       FROM table_name
+       WHERE Condition
+```
 
+```sql
+       SELECT *
+       FROM Students
+       WHERE Score > 500 
+```
 
+```sql
+       SELECT
+           firsr_name,
+           country
+       FROM Students
+       WHERE Score > 500 and Country = 'India'
+```
 
+<!---------------------------------->
 
+##  ```ORDER BY``` Clause | Sort the data
 
+We can used ```ORDER BY``` clause in order to sort our data.
 
+Of course in order to sort the data, we have to decide on 2 mechanism either **ascending order** (lowest value to highest value) and **descending order** (Highest to lowest value.
 
+```sql
+      SELECT *
+      FROM table_name
+      ORDER BY column ASC
+```
 
+If you don't specify the mechanism, the default is **ASC**. But It is recommended to specify for clarity.
+
+```sql
+      SELECT *
+      FROM Students
+      ORDER BY rollNumber DESC
+```
+
+<!------------------------------------>
+
+## **(Nested) ```Order BY``` | Sort the data**
+
+We can sort out data using multiple columns and we call it Nested Sorting.
+
+```sql
+      SELECT *
+      FROM Students
+      ORDER BY Country ASC
+```
+The data is not sorted completely as we sorted it on only one column, to sort it in more better way we can sort it on multiple columns
+
+```sql
+      SELECT *
+      FROM table_name
+      ORDER BY Col1,Col2 DESC
+```
+```sql
+      SELECT *
+      FROM Students
+      ORDER BY Country ASC, Score DESC
+```
+Here, first Country will be in ascending then Score in ascending.
+
+Important Note : Columns order in ORDER BY is crucial, as sorting is sequential. 
+
+```sql
+      SELECT *
+      FROM Student
+      ORDER BY Score DESC, Country ASC
+```
+Here, first Score will be Sorted descending then Country in ascending.
+
+We have learned How to sort data using ORDER BY.
+Now let's learn how to aggregate and group up your data using GROUP BY.
+GROUP BY is put in between WHERE and ORDER BY bcuz in the order of query GROUP BY comes between WHERE and ORDER BY.
+
+<!------------------------------------>
+
+## ```GROUP BY``` | Aggregate or group your data
 
 
 
