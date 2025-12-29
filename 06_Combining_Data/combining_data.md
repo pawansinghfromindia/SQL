@@ -97,10 +97,10 @@ If you want to combine the ROWS that means we're talking about joining tables, t
 <!--------6.1--------->
 
 
-## 6.2  SQL ```JOINs```
+## 6.2  SQL ```JOIN```
 
 <details>
-<summary> What is <b>SQL JOINs</b>?</summary>
+<summary> What is <b>SQL JOIN</b>?</summary>
 Let's say we have 2 tables.
   
 &nbsp;&nbsp; Table 1
@@ -137,7 +137,7 @@ Now, once we connect those IDs, We will be able to query those tables together. 
 
 Why do we actually need SQL JOINs?
 
-Reason 1. **Recombine Data** <br/>
+Reason 1. **Recombine Data** to see **Big Picture**<br/>
 
 Usually in databases, the data about something could be stored in multiple tables based on requirements. <br/>
 Like Data about students can be stored in multiple tables.
@@ -151,7 +151,7 @@ Like Data about students can be stored in multiple tables.
 
 - Addresses
 
-|   ID  | Posta_Code  |  
+|   ID  | Post_Code  |  
 |-------|-------------|
 |   1   |   10161     |
 |   2   |   20005     |
@@ -177,10 +177,85 @@ Now, If we want to see all the data about students in one result. (Complete Big 
 So, What we can do is connect those 4 tables using the SQL JOIN.
 Once that's done, In one query, we will able to combine the results in one table. (All details about Students)
 
-Reason 1. **Data Enrichment** Getting Extra Data <br/>
+Reason 2. **Data Enrichment** Getting **Extra Info** <br/>
 We have a master table that contains all the data, Now we want few extra information from another table that may be Reference Table.
 In order to get extra data information, we use JOIN.
 Getting extra data for main master table from source reference table.
+
+- Master Table : Students
+
+|   ID  |  Name    |   Country   |  
+|-------|----------|-------------|
+|   1   |  Maria   |   Germany   |
+|   2   |  John    |   USA       |
+|   3   |  Peter   |   UK        |
+|   4   |  Martin  |   Germany   |  
+
+- Reference Table : Zip Codes
+
+|   ID  | Zip_Code    |  
+|-------|-------------|
+|   1   |   10001     |
+|   2   |   20005     |
+|   3   |   30005     |
+|   4   |   60002     |  
+
+- Extra Info : Enhanced Students Table
+
+|   ID  |  Name    |   Country   |  Zip_Code  |
+|-------|----------|-------------|------------|
+|   1   |  Maria   |   Germany   |  10001     |
+|   2   |  John    |   USA       |  20005     |
+|   4   |  Martin  |   Germany   |  60002     |
+
+Reason 3. **Check for Existence** of one table data in another table if it exists or not. <br/>
+**Filtering** the data based on JOIN.
+
+- Students : Data has to be checked
+
+|   ID  |  Name    |   Country   |  
+|-------|----------|-------------|
+|   1   |  Maria   |   Germany   |
+|   2   |  John    |   USA       |
+|   3   |  Peter   |   UK        |
+|   4   |  Martin  |   Germany   |  
+
+- Orders : Lookup Table
+
+|   ID  |  Order_ID   | Order_Date     |  Product_ID  | 
+|-------|-------------|----------------|--------------|
+|   1   |  101        | '2026-01-15'   |  A1001B      |
+|   2   |  112        | '2026-01-17'   |  A3001B      |
+|   4   |  221        | '2026-01-21'   |  A5001B      |
+
+- Students : Filters the data based on JOIN whether Students orders or the students which didn't order anything.
+
+|   ID  |  Name    |   Country   |  
+|-------|----------|-------------|
+|   1   |  Maria   |   Germany   |
+|   2   |  John    |   USA       |
+|   4   |  Martin  |   Germany   | 
+
+</details>
+
+<details>
+   <summary> <b>JOIN Types</b></summary>
+
+There are a lot of different possibility on How to JOIN tables.
+Table A(Left), Table B(Right) are 2 tables depicted through 2 circle.
+If we combine these 2 tables, Both Circles overlaped, there are 3 possibilities :
+- through only overlap area, we will get common data of two table : **Matching Data**
+- considered all the data of Left table which do also contains the data of right table as those common data of two tables : **All Data**
+- considered all the data of left table which do not match or common in right table : **UnMatching Data**
+
+|                            Basic Joins                                          |                       Advanced Join                                                    |
+|---------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| No Join     :  No Common data between 2 tables                                  | Cross Join : All the data of left table cross multiply to all the data of right tables | 
+| Inner Join  :  Only Common data of 2 Tables                                     |                                                                                        |
+| Left Join   :  all data of Left table, which includes common data of right table| Left Anti Join : all data of Left table, which excludes common data of right table     |
+| Right Join  :  all data of right table, which includes common data of left table| Right Anti Join : all data of right table, which excludes common data of left table    |
+| Full Join   :  all the data of left & right which includes common data of both  | Full Anti Join : all the data of left & right which includes common data of both       |
+
 
 </details>
 
