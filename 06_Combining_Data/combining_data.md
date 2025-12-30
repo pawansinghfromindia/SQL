@@ -4,16 +4,8 @@
 Here, We will learn How to combine data from multiple tables.
 
 **```JOINS```**
-- Basic Joins
-  - ```INNER Join``` 
-  - ```LEFT Join```
-  - ```RIGHT Join```
-  - ```FULL Join```
-- Advanced Joins
-  - ```LEFT Anti Join```
-  - ```RIGHT Anti Join```
-  - ```FULL Anti Join```
-  - ```Cross Join```
+- **Basic JOINs** : ```INNER JOIN```, ```LEFT JOIN```, ```RIGHT JOIN```, ```FULL JOIN```
+- **Advanced JOINs** : ```LEFT ANTI JOIN```, ```RIGHT ANTI JOIN```, ```FULL ANTI JOIN``` and ```CROSS JOIN```
 
 - How to choose the right JOIN?
 - How to JOIN multiple Tables?
@@ -786,6 +778,7 @@ Syntax :
    ON s.id = o.student_id
    WHERE s.id IS NULL OR o.student_id IS NULL;
 ```
+Students
 
 |  id  |  name     | country   | score |
 |------|-----------|-----------|-------|
@@ -817,6 +810,26 @@ Results
 </details>
 
 <details>
+  <summary> <b>CHALLENGE</b> : Get all students along with their orders, but only for students who have placed an order (Without using INNER JOIN). </summary>
+
+- In order to solve anything, Don't rush. Go step by step. Since, here we can't use INNER JOIN so first thing we can do is get all data from students using LEFT and then apply filter to get those records which must have orders (How to check this? : In orders your key column (student_id) must be not NULL then only you can say the order is of any student)
+
+```sql
+  --CHALLENGE : Get all students along with thier orders, but only for students who have placed an order (Without using INNER JOIN).
+       SELECT
+            s.id,
+            s.name,
+            o.order_id,
+            o.order_date
+       FROM students AS s
+       LEFT JOIN orders AS o
+       ON s.id = o.student_id
+       WHERE o.student_id IS NOT NULL;
+``` 
+</details>
+
+
+<details>
   <summary> <b> CROSS JOIN </b> </summary>
   
 - ```CROSS JOIN``` is totally different than all other joins we have seen before.
@@ -838,10 +851,43 @@ Syntax :
 > Note : Since, we don't care at all about data is matching or not, just want to see all possible combination that's why no need to put any condition. 
 
 > The order of table doesn't matter.
+
+```sql
+    SELECT *
+    FROM students
+    CROSS JOIN orders
+```
+
+Students
+
+|  id  |  name     | country   | score |
+|------|-----------|-----------|-------|
+|  1   | Maria     | Germany   | 350   |
+|  2   | John      | USA       | 900   |
+
+Orders
+
+|  order_id | order_date | sales | student_id |
+|-----------|------------|-------|------------|
+| 1001      |'2026-01-01'| 35    |  1         |
+| 1002      |'2026-01-05'| 15    |  2         |
+| 1003      |'2026-01-11'| 20    |  3         |
+
+Results :
+
+|  id  |  name    | country   | score |  order_id | order_date | sales | student_id |
+|------|----------|-----------|-------|-----------|------------|-------|------------|
+|  1   | Maria    | Germany   | 350   | 1001      |'2026-01-01'| 35    |  1         |
+|  1   | Maria    | Germany   | 350   | 1002      |'2026-01-05'| 15    |  2         |
+|  1   | Maria    | Germany   | 350   | 1003      |'2026-01-11'| 20    |  3         |
+|  2   | John     | USA       | 900   | 1001      |'2026-01-01'| 35    |  1         |
+|  2   | John     | USA       | 900   | 1002      |'2026-01-05'| 15    |  2         |
+|  2   | John     | USA       | 900   | 1003      |'2026-01-11'| 20    |  3         |
+
 </details>
 
-
-## **Use Cases of ```JOINs```**
+<details>
+  <summary><b>Use Cases of JOINs</b> : Recombine Data, Data Enrichment & Data Filtering </summary>
 
 |    Usecase                             |    ```JOIN```                                                   |
 |----------------------------------------|-----------------------------------------------------------------|
@@ -849,31 +895,57 @@ Syntax :
 | 2. Data Enrichment (to get Extra Info) |    ```LEFT```, ```FULL```                                       |
 | 3. Check Existence of Data (Filtering) |    ```INNER```, ```LEFT``` + ```WHERE```, ```FULL```+```WHERE```|
 
-
-<details>
-  <summary> <b>CHALLENGE : Get all students along with thier orders, but only for students who have placed an order (Without using INNER JOIN).</b> </summary>
-
-- In order to solve anything, Don't rush. Go step by step. Since, here we can't use INNER JOIN so first thing we can do is get all data from students using LEFT and then apply filter to get those records which must have orders (How to check this? : In orders your key column (student_id) must be not NULL then only you can say the order is of any student)
-
-```sql
-  --CHALLENGE : Get all students along with thier orders, but only for students who have placed an order (Without using INNER JOIN).
-       SELECT
-            s.id,
-            s.name,
-            o.order_id,
-            o.order_date
-       FROM students AS s
-       LEFT JOIN orders AS o
-       ON s.id = o.student_id
-       WHERE o.student_id IS NOT NULL;
-```
-  
 </details>
+ 
+<details>
+  <summary><b>How to choose Between JOIN Types? : Decision Tree </b></summary>
+- If you want to see results **Only Matching Data** between 2 tables -> **```INNER JOIN```**
+- If you want to see everything **All Rows** after joining 2 tables then we take different path :
+  - If you want to all data from one table from **one side important** like **Main/Master table** -> **```LEFT JOIN```**
+  - If you want to see all data from both tables, **Both sides are important** -> **```FULL JOIN```**
+- If you want to see **Only Unmatching Data** there are two path :
+  - If you want **Unmatching data from only one table**, **one side is important (Master table)** -> **```LEFT ANTI JOIN```**
+  - If you want **Unmatching data from both tables**, **Both sides are important** -> **```FULL ANTI JOIN```**                  
 
+> We don't use ```RIGHT JOIN``` at all as we have alternative to this which is ```LEFT JOIN```.
 
+> ```LEFT JOIN``` is most used and favorite one. 
+</details>
 
 <!------------------------------>
 
+**Multi-Table JOIN** 
+
+While we do Data Analysis, We always have a **starting point** like a topic about Customer, you have a **Master Table** (analysis always starts from here) which is your main table. <br/>
+Now **Master table** Table A is not enough for analysis, need some extra data from anothers table (**Secondary Tables**) Table B. <br/>
+So, In order to get extra info We can connect master table A to table B using  ```LEFT JOIN```. <br/>
+Similar way another extra data is required from Table C. <br/>
+Again We join our master table A to another table C using ```LEFT JOIN``` <br/>
+And so on... <br/>
+If you want to see only matching data then we can control everything using ```WHERE``` by putting condtion to filter data. <br/>
+
+```sql
+    SELECT *
+    FROM A
+    LEFT JOIN B ON A.key = B.key
+    LEFT JOIN C ON A.key = C.key
+    LEFT JOIN D ON A.key = D.key
+    WHERE <condtion>
+
+--Table A is master table, which is a primary source of data
+--Table B,C,D are secondary tables is used for getting extra info
+--WHERE controls what to keep
+```
+- We learned  ```JOIN``` in order to combine multiple tables to get a complete big picture about any thing & the data is stored in a table.
+  So either we can start with main table and ```LEFT JOIN``` other tables or there is no main table, all the tables are equally important then in that case we can join all those tables using   ```INNER JOIN``` if you're interested in only matching data. There you will get only overlapping between all multiple tables.
+
+```sql
+   SELECT *
+    FROM A
+    INNER JOIN B ON A.key = B.key
+    INNER JOIN C ON A.key = C.key
+    INNER JOIN D ON A.key = D.key
+```
 
 ## 6.3 SQL ```SET Operators```
 
