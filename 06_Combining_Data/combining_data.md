@@ -1351,12 +1351,13 @@ Output Result of Employees INTERSECT Customers:
 <details> 
  <summary>Use Cases of <b> SET Operators </b> </summary>
 
-|                 Use Cases                                |    SET Operators               |
-|----------------------------------------------------------|--------------------------------|
-|1. Combine similar information before analysing the data. | ```UNION``` or ```UNION ALL``` |
-|2. 
+|                 Use Cases                                                               |    SET Operators             |
+|-----------------------------------------------------------------------------------------|------------------------------|
+|1. Combine similar information before analysing the data.                                | ```UNION```, ```UNION ALL``` |
+|2. Identifying the differences or changes (Delta Detection) between two batches of data. | ```EXCEPT``` or ```MINUS```  |
+|3. To compare tables to detect discrepancies between databases (Data Completeness Check) | ```EXCEPT``` or ```MINUS```  |
 
-1. Combine similar information before analysing the data. <br/>
+**1. Combine similar information before analysing the data.** <br/>
 -Let's say we have 4 tables (Employees, Customers, Suppliers, Students) <br/>
 -As we can all of the 4 tables are sharing same kind of information they hold data about persons. <br/>
 -Now we have to generate a reports that requires all of the individual in the organisation in the database. <br/>
@@ -1365,10 +1366,82 @@ Output Result of Employees INTERSECT Customers:
 -Instead what we can do is use SET Operator in order to combine all those tables in one big table. <br/>
 -Employees ```UNION``` Customers ```UNION``` Suppliers ```UNION``` Students to make new big table **Persons** which contains all the rows from all the tables. <br/>
 -Now, we can write a single SQL query in order to analyse the new big table which holds data about every Person of an Organisation and make report.
+
+> Database Developers divide the data into multiple tables to optimized performance and archive old data. <br/>
+e.g. There is a big table Orders contains huge data, so Developers divide this order table into multiple tables in order to optimize performance like orders_2026, orders_2025, orders_2024, orders_2023, orders_2022. Here, We can combine all these tables into one tables using ```UNION``` and write a single query to generate a report.
+
+```sql
+  -- Task : Orders are stored in a seperate tables (orders and orderArchive). Combine all orders into one report without duplicates.
+
+     SELECT *
+     FROM Sales.orders
+     UNION
+     SELECT *
+     FROM SalesorderArchive
+
+  -- * is not recommended to use while combining the tables
+
+  -- If you want to see the columns of a table, you can do this by either DESC TABLE table_name;
+  -- or go to database object explorer > table > right click SELECT 100 copy from there.
+
+
+     SELECT
+          'order' AS sourceTable,
+          o.order_id,
+          o.product_id,
+          o.customer_id,
+          o.order_date,
+          o.order_status,
+          o.salesPerson_id
+     FROM Sales.orders AS o
+     UNION
+     SELECT
+          'orderArchive' AS sourceTable,
+          oa.order_id,
+          oa.product_id,
+          oa.customer_id,
+          oa.order_date,
+          oa.order_status,
+          oa.salesPerson_id
+     FROM Sales.orderArchive AS oa
+
+     ORDER BY order_id;
+```
+
+> Best Practice : Never use * (asterisk) to combine tables, instead always use list of columns. <br/>
+Because using column name makes more clear to read query and also if you want to switch order you can as per your use. And also It is not necessary that both tables should have equal number of columns etc etc.
+
+> Add a static string in order to differentiate the table data.
+
+**2. Identifying the differences or changes (Delta Detection) between two batches of data** <br/>
+- e.g. Data Engineers build Data pipeline in order to load daily new data from **Source System** to **Data Warehouse or Data Lake**.
+- In those Data Pipelines, We build a logic in order to identify what are the new data that is generated from the source system in order to insert it into Data Warehouse or Data Lake.
+- One way is to use ```SET Operator``` in order to compare the current data with previous load. like We received 100 rows on Day 1, we inserted the data into Data Warehouse or Data Lake. On Day 2, we received 120 rows out of which 100 were already present, so in order to load only the data which is not present in our Data Warehouse or Data Lake we use ```EXCEPT```, by using the ```EXCEPT``` between those two sets we can identify the new data that's existing in Source System table.
+- So if we do ```EXCEPT``` between Day2 and Day1 then we will get only new records.
+
+> ```EXCEPT``` SET Operator is very powerful in order to compare two sets. Not only for Data Analysis, we can use it in Data Engineering in order to identify what is the new data that is generated from the source to insert into Data Warehouse or Data Lake.
+
+**3. To compare tables to detect discrepancies between databases (Data Completeness Check)** <br/>
+- We have a scenario where we are doing Data Migration between two databases, and we want to move a table from DatabaseA to new DatabaseA.
+- It is very important is to check whether all the records did move from DatabaseA to DatabaseB, we're not missing anything even one record.
+- So, Basically we want to do Data Completeness Check, And there are many methods to do this test. One is to use SET Operator ```EXCEPT```.
+- We can do an ```EXCEPT``` between table from DatabaseA and table from DatabaseB in order to find if any records which is not migrated from DatabaseA to DatabaseB.
+- If we get result is empty that means all the rows from DatabaseA to DatabaseB and then Table from DatabaseB EXCEPT DatabaseA this also gives empty that means we migrated data successfully.
   
 </details> 
 
+**Summary of SET Operators** <br/>
+- Combines the results of multiple queries into a single result set.
+- SET Operator Types : ```UNION```, ```UNION ALL```, ```EXCEPT/MINUS``` and ```INTERSECT```
+- Rules :
+  - Same num of columns, datatypes and order of columns.
+  - 1st Query controls column names.   
+- Use Cases :
+  - Combine Information (```UNION``` + ```UNION ALL```)
+  - Delta Detection (```EXCEPT```)
+  - Data Completeness Check (```EXCEPT```) 
 
 
 <!---------Chapter 6. Combining Data----------------->
 
+[Filtering Data](https://github.com/pawansinghfromindia/SQL/blob/main/05_Filtering_Data/filtering_data.md) | [Row-Level functions]()
