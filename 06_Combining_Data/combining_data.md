@@ -18,7 +18,7 @@ Here, We will learn How to combine data from multiple tables.
 -  ```INTERSECT```
 
 
-## 6.1 Combining (joining) Data
+## 6.1 Combining (joining) the Data
 
 <details>
   <summary> Joining the Data of tables using <b>JOINs</b> or <b>SET Operators</b>. </summary>
@@ -45,7 +45,8 @@ What do we want exactly? Do we want to combine ROWS or COLUMNS?
 
 ### 6.1a Combining data using ```JOINS```
 
-If you want to combine the COLUMNS that means we're talking about joining tables, that's where we use ```JOINs``` <br/>
+**If you want to combine the COLUMNS that means we're talking about joining tables, that's where we use ```JOINs```** <br/>
+
 - Here what Join will do is take columns and rows of Table B (Right) and put side by side with the columns and rows of Table A (Left).
 - We're combining the columns side by side using JOIN. Our table is going to be Wider column wise.
 - In order to join, we have 4 types of JOIN
@@ -86,6 +87,11 @@ If you want to combine the ROWS that means we're talking about joining tables, t
 |     16     |     17     |    18     |
 
 </details>
+
+> **If you want to combine the COLUMNs that means we're talking about joining tables, that's where we use ```JOINs```** <br/>
+
+> **If you want to combine the ROWs then we're going to use ```SET OPERATORs```** <br/>
+
 <!--------6.1--------->
 
 
@@ -280,7 +286,7 @@ Syntax :
 
 </details>
 
-**Basic Joins** ```INNER Join```  ```LEFT Join``` ```RIGHT Join``` ```FULL Join```
+### 🔻 **Basic JOINs** ```INNER Join```  ```LEFT Join``` ```RIGHT Join``` ```FULL Join```
 
 <details>
   <summary> <b> INNER JOIN </b> </summary>
@@ -598,7 +604,7 @@ Now we have learned basic JOINs ```INNER JOIN```, ```LEFT JOIN```, ```RIGHT JOIN
 
 </details>
 
-**Advanced Joins** ```CROSS Join```, ```LEFT Anti Join```,  ```RIGHT Anti Join``` and ```FULL Anti Join```  
+### 🔻 **Advanced JOINs** : ```LEFT ANTI JOIN```,  ```RIGHT ANTI JOIN```, ```FULL ANTI JOIN``` and ```CROSS JOIN```  
 
 
 <details>
@@ -896,9 +902,10 @@ Results :
 | 3. Check Existence of Data (Filtering) |    ```INNER```, ```LEFT``` + ```WHERE```, ```FULL```+```WHERE```|
 
 </details>
- 
+
+ ### 🔻 How to choose Between JOIN Types?
 <details>
-  <summary><b>How to choose Between JOIN Types? : Decision Tree </b></summary>
+  <summary><b> Decision Tree to choose the right JOIN? </b></summary>
 - If you want to see results **Only Matching Data** between 2 tables -> **```INNER JOIN```**
 - If you want to see everything **All Rows** after joining 2 tables then we take different path :
   - If you want to all data from one table from **one side important** like **Main/Master table** -> **```LEFT JOIN```**
@@ -913,6 +920,11 @@ Results :
 </details>
 
 <!------------------------------>
+
+### 🔻 How to join multiple tables?
+
+<details>
+  <summary> <b> Multi-Table JOIN and ER Model </b> </summary>
 
 **Multi-Table JOIN** 
 
@@ -947,13 +959,416 @@ If you want to see only matching data then we can control everything using ```WH
     INNER JOIN D ON A.key = D.key
 ```
 
+```sql
+    --Task : Using Sales DB, retrieve a list of all orders, along with the related customer, product and employee details.
+    --For each order, display :
+    --  - Order ID
+    --  - Customer name
+    --  - Product name
+    --  - Sales Amount
+    --  - Product price
+    --  - Salesperson's name
+    -- Hint : orders (main table) rest are secondary table
+
+    USE SalesDB
+
+    SELECT
+         o.orders,
+         o.sales,
+         c.name AS customer_name,
+         p.product AS product_name,
+         p.price,
+         e.name AS employee_name
+    FROM Sales.orders AS o
+    LEFT JOIN Sales.customers AS c
+    ON o.customer_id = c.customer_id
+    LEFT JOIN Sales.products AS p
+    ON o.product_id = p.product_id
+    LEFT JOIN Sales.employees AS e
+    ON o.SalesPerson_Id = p.employee_id
+```
+
+
+**Entity-Relationship Model (ER Model)** <br/>
+> 1. If we work on big project, we are going to have lot of tables. <br/>
+> 2. Out of 100s tables, Exloring each of them is really hard. <br/>
+> 3. So, Usually a good project / database has **Entity-Relationship Model (ER Model)**. <br/>
+> 4. Here, you can find easily the relationship between the tables (**Master table** to **Secondary tables**) which is very important specially if you want to ```JOIN``` tables. <br/>
+> 5. We have an orders(Master table) and other secondary tables (customers, employees, products) <br/>
+> 6. Inside orders table, Order_Id column is **```Primary Key (PK)```** and there is a column Customer_Id which is a **```Foreign Key (FK)```** to the Customer_Id of customers table(secondary table). <br/>
+> 7. So that means If we want to connect orders table to customers table, we have to use that customer_id. <br/>
+> This pictorial representation of this in a diagram is known as **ER Diagram**
+
+|Orders  |     Table      |
+|--------|----------------|
+|**PK**  | **Order_Id**   |
+| FK     | Product_Id     |
+| FK     | Customer_Id    |
+| FK     | SalesPerson_Id |
+|        | Order_Date     |
+|        | Order_Status   |
+|        | Quantity       |
+|        | Sales          |
+
+|Products |     Table      |
+|---------|----------------|
+|**PK**   | **Product_Id** |
+|         |   Product      |
+|         |   Category     |
+|         |   Price        |
+
+|Customers |     Table       |
+|----------|-----------------|
+|**PK**    | **Customer_Id** |
+|          |   Name          |
+|          |   Country       |
+|          |   Score         |
+
+| Employees |     Table      |
+|----------|-----------------|
+|**PK**    | **Employee_Id** |
+|          |   Name          |
+|          |   Department    |
+|          |   Salary        |
+|          |   Manager_ID    |
+
+> The name of Foreign Key of master table to Primary Key of secondary table not necessarily same, their data must me matched. Hence SalesPerson_Id which is a FK of Orders is conected to PK of Employees.
+
+</details>
+<!------------------------------------->
+
 ## 6.3 SQL ```SET Operators```
 
+**How to combine ROWs from multiple tables?** <br/> 
+
+We have learned in order to combine 2 tables. We have 2 methods. 
+1. To combine COLUMNs use ```JOIN``` and
+2. To combine ROWs use ```SET Operators```
+
+> **4 Types of SET Operators : ```UNION```, ```UNION ALL```, ```MINUS```/```EXCEPT``` and ```INTERSECT```** <br/>
+
 <details>
-<summary> What are SQL <b>SET Operators</b>? </summary>
+<summary> Syntax & Rules of <b> SET Operators</b>? </summary>
+
+**Syntax of SET Operators** :
+
+```sql
+   SELECT
+       first_name,
+       last_name
+   FROM customers
+   JOIN Clause
+   WHERE Clause
+   GROUP BY Clause
+
+   UNION
+
+    SELECT
+       first_name,
+       last_name
+   FROM employees
+   JOIN Clause
+   WHERE Clause
+   GROUP BY Clause
+
+   ORDER BY first_name    --ORDER BY can be used only at the end to sort the final result.
+```
+
+**Rules of SET Operators** :
+
+**Rule 1.** SET Operator can be use almost in all clauses ( ```WHERE```, ```JOIN```, ```GROUP BY```, ```HAVING```) except ***```ORDER BY```***. Because ```ORDER BY``` is allowed only once at the end of the entire query.
+
+**Rule 2.** The **number of columns** in SELECT of each query must be the same.
+
+**Rule 3.** The **data types of columns** in each query must be campatible (matching).
+
+**Rule 4.** The **order of columns** in each query must be same.
+
+**Rule 5.** The **name of columns** in the output result set are determined by the column name specified in the first query. <br/>
+-Meaning, First Query is responsible for naming the columns in output.  <br/>
+-So, If we want to change the column names in output result, we always do ALIAS in first query that's enough, No need to do ALIAS in each query bcuz SQL ingnores it.
+
+**Rule 6.** Even if all rules are met and SQL shows no errors, the result may be incorrect.  <br/>
+-Bcuz Inccorect column selection leads to inaccurate results.
+
+> SQL doesn't know to content of data, SQL does only mapping of number of columns and its datatype.
   
 </details>
-
 <!------------------------------>
+
+<details>
+  <summary> <b> UNION </b> </summary>
+
+- Returns all distincts rows from both queries.
+- Remove duplicates rows from the result. 
+- Here, Order of the query does not effect the final result.
+
+```sql
+  Task : Combine the data from  employees and customers into one table.
+
+  SELECT
+       first_name,
+       last_name
+  FROM Sales.customers 
+  UNION
+  SELECT
+       first_name,
+       last_name
+  FROM Sales.employees 
+
+```
+
+How SQL do combine the data internally using UNION ? <br/>
+-First step SQL does is go & takes column_names from first query to the results, then takes all the rows from first query table and checks whether there is any duplicates, if found deletes it, then next step is start adding from the second query table very carefully without generating any duplicates. if row is already present in result, it ignores it and then next row, if it doesn't exist in result add it to result. 
+
+Employees
+
+|first_name|last_name|
+|----------|---------|
+| Rohit    | Sharma  |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Vikash   | Dubey   |
+| Vipin    | Patel   |
+
+Customers
+
+|first_name|last_name|
+|----------|---------|
+| Ganesh   | Bhatt   |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Navin    | Patil   |
+| Guddu    | Pandit  |
+
+Output Result :
+
+|first_name|last_name|
+|----------|---------|
+| Rohit    | Sharma  |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Vikash   | Dubey   |
+| Vipin    | Patel   |
+| Ganesh   | Bhatt   |
+| Navin    | Patil   |
+| Guddu    | Pandit  |
+
+</details>
+<!----------------------------------------->
+
+<details>
+  <summary> <b> UNION ALL </b> </summary>
+
+- Returns all rows from both queries, including duplicates.
+  
+- Here, Order of the query does not effect the final result.
+
+> ```UNION ALL``` is only SET Operator that does not remove any duplicates rows. It shows all the rows as it is.
+
+- ```UNION ALL``` vs ```UNION```
+
+> ```UNION ALL``` is generally way faster than ```UNION```. That's bcuz ```UNION ALL``` doesn't perform additional steps like removing duplicates what ```UNION``` does.
+
+> If you know that there are no duplicates, use ```UNION ALL```. It gives you better performance.
+
+
+```sql
+  Task : Combine the data from  employees and customers into one table including duplicates.
+
+  SELECT
+       first_name,
+       last_name
+  FROM Sales.customers 
+  UNION ALL
+  SELECT
+       first_name,
+       last_name
+  FROM Sales.employees 
+```
+
+How SQL do combine the data internally using ```UNION ALL```? <br/>
+-First step SQL does is go & takes column_names from first query to the results, and then SQL will take all rows of first query table and put it in output result without checking anything.
+-Now SQL will take all the rows of second query table and appended it to output results.
+
+Employees
+
+|first_name|last_name|
+|----------|---------|
+| Rohit    | Sharma  |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Vikash   | Dubey   |
+| Vipin    | Patel   |
+
+Customers
+
+|first_name|last_name|
+|----------|---------|
+| Ganesh   | Bhatt   |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Navin    | Patil   |
+| Guddu    | Pandit  |
+
+Output Result :
+
+|first_name|last_name|
+|----------|---------|
+| Rohit    | Sharma  |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Vikash   | Dubey   |
+| Vipin    | Patel   |
+| Ganesh   | Bhatt   |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Navin    | Patil   |
+| Guddu    | Pandit  |
+  
+</details>
+<!----------------------------------------->
+
+<details>
+  <summary> <b> EXCEPT </b> or <b> MINUS </b> </summary>
+
+```EXCEPT``` and ```MINUS``` both are same used in different different server.
+
+- Returns all distinct rows from the first query that are not found in the second query.
+  
+- It is the only ```EXCEPT``` or ```MINUS``` where the order of queries affect the final result.
+
+```sql
+   -- Task : Find the employees who are not customers at the same time.
+
+          SELECT
+                 first_name,
+                 last_name
+          FROM Sales.customers 
+           EXCEPT                                  -- EXCEPT == MINUS
+          SELECT
+                 first_name,
+                 last_name
+          FROM Sales.employees 
+```
+
+How SQL do combine the data internally using ```EXCEPT```? <br/>
+-First step SQL does is go & takes column_names from first query to the results, now SQL will going to put  row1 of first query table data in output and then SQL is going to use second query table only as a check. So SQL will not put any row from second query table. and again row2, row3,..... of first query table data.
+
+Employees
+
+|first_name|last_name|
+|----------|---------|
+| Rohit    | Sharma  |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Vikash   | Dubey   |
+| Vipin    | Patel   |
+
+Customers
+
+|first_name|last_name|
+|----------|---------|
+| Ganesh   | Bhatt   |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Navin    | Patil   |
+| Guddu    | Pandit  |
+
+Output Result of Employees EXCEPT Customers:
+
+|first_name|last_name|
+|----------|---------|
+| Rohit    | Sharma  |
+| Vikash   | Dubey   |
+| Vipin    | Patel   |
+
+Output Result after switching the order of Table Customers EXCEPT Employees:
+
+|first_name|last_name|
+|----------|---------|
+| Ganesh   | Bhatt   |
+| Navin    | Patil   |
+| Guddu    | Pandit  |
+    
+</details>
+<!----------------------------------------->
+
+<details>
+  <summary> <b> INTERSECT </b> </summary>
+
+- Returns only rows that are common in both queries.
+- It is similar to the ```INNER JOIN``` but row wise.
+- It also removes duplicates.
+
+```sql
+   -- Task : Find the employees who are also customers at the same time.
+
+          SELECT
+                 first_name,
+                 last_name
+          FROM Sales.customers 
+           INTERSECT
+          SELECT
+                 first_name,
+                 last_name
+          FROM Sales.employees 
+```
+
+How SQL do combine the data internally behind the scene using ```INTERSECT```? <br/>
+-First step SQL does is go & takes column_names from first query to the results, SQL is going row by row, first row1 data of the first query table and check with the second query table data if it is present that means common so include the row1 into result else skip it. Again row2 of first query table complare it with second query table, similiarly row3, row4 and so on.
+
+Employees
+
+|first_name|last_name|
+|----------|---------|
+| Rohit    | Sharma  |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Vikash   | Dubey   |
+| Vipin    | Patel   |
+
+Customers
+
+|first_name|last_name|
+|----------|---------|
+| Ganesh   | Bhatt   |
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+| Navin    | Patil   |
+| Guddu    | Pandit  |
+
+Output Result of Employees INTERSECT Customers:
+
+|first_name|last_name|
+|----------|---------|
+| Rahul    | Kumar   |
+| Vishal   | Singh   |
+  
+</details>
+<!----------------------------------------->
+
+<details> 
+ <summary>Use Cases of <b> SET Operators </b> </summary>
+
+|                 Use Cases                                |    SET Operators               |
+|----------------------------------------------------------|--------------------------------|
+|1. Combine similar information before analysing the data. | ```UNION``` or ```UNION ALL``` |
+|2. 
+
+1. Combine similar information before analysing the data. <br/>
+-Let's say we have 4 tables (Employees, Customers, Suppliers, Students) <br/>
+-As we can all of the 4 tables are sharing same kind of information they hold data about persons. <br/>
+-Now we have to generate a reports that requires all of the individual in the organisation in the database. <br/>
+-So, we will write 4 queries, one for each table and then merge all the results into final report. <br/>
+-Now the issue with this setup is that You're having a lot of similar queries and if you modifies in one or two and forget to rest then you will get inaccurate inconsistent data, you have to make changes in every query. <br/>
+-Instead what we can do is use SET Operator in order to combine all those tables in one big table. <br/>
+-Employees ```UNION``` Customers ```UNION``` Suppliers ```UNION``` Students to make new big table **Persons** which contains all the rows from all the tables. <br/>
+-Now, we can write a single SQL query in order to analyse the new big table which holds data about every Person of an Organisation and make report.
+  
+</details> 
+
+
+
 <!---------Chapter 6. Combining Data----------------->
 
