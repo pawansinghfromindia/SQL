@@ -675,23 +675,230 @@ How to do formatting and casting for the date information in SQL?
 **What are FORMATING and CASTING?** 
 
 **Formatting** : Changing the format of a value from one to another. Meaning, Changing how the data looks. <br/>
+
 '2026-08-20' -> ```FORMAT()``` -> '08/20/2026' or 'Aug 2026' by providing the required format.
 
 In SQL, there is another function that helps us to format data i.e. ```CONVERT()``` Here, we don't provide format, but provide style number.
 if style num = 6 -> 20 Aug 25
 if style num = 112 -> 20250820
 
-Not only Date, we can also format Number.
-1234567.89 -> ```FORMAT(N)``` -> 1,234,567.89
-1234567.89 -> ```FORMAT(C)``` -> $ 1,234,567.89
-1234567.89 -> ```FORMAT(P)``` -> $ 123,456,789.00%
+Not only Date, we can also format Number. <br/>
+1234567.89 -> ```FORMAT(N)``` -> 1,234,567.89 <br/>
+1234567.89 -> ```FORMAT(C)``` -> $ 1,234,567.89 <br/>
+1234567.89 -> ```FORMAT(P)``` -> $ 123,456,789.00% <br/>
 
 > Output result of ```FORMAT()``` is String.
 
 Here, we have seen how the value looks like.
 On the other hand 
 
-**Casting** : Changing the data type from one to another.
+**Casting** : Changing the data type from one to another. <br/>
+String '123' -> ```CAST()``` -> 123 Interger <br/>
+Date '2026-01-31' -> ```CAST()``` -> '2026-01-31' String <br/>
+String '2026-01-31' ```CAST()``` -> '2026-01-31' Date <br/>
+
+
+> We can do casting using ```CAST()``` function or ```CONVERT()``` function in order to change the data type.
+
+### ```Format( )```
+
+- Formate a date or the time value
+
+Syntax :
+```sql
+   FORMAT(value, format, [culture]) 3rd is optional & Default culture is `en-US`
+
+   FORMAT(order_date, 'dd/MM/yyyy')
+
+   FORMAT(order_date, 'dd/MM/yyyy', 'ja-JP') --Japanese Style
+
+   FORMAT(1234.56, 'D', 'fr-FR') --J France Style  
+```
+
+```sql
+   SELECT
+      order_id,
+      creation_time,
+      FORMAT(creation_time, 'dd') dd                   --01,02,....,31
+      FORMAT(creation_time, 'ddd') ddd                 --Sun,Mon,.....Sat
+      FORMAT(creation_time, 'dddd') dddd               --Sunday,Monday,.....Saturday
+      FORMAT(creation_time, 'MM') MM                   --01,02,......,12
+      FORMAT(creation_time, 'MMM') MMM                 --Jan, Feb,.....,Dec
+      FORMAT(creation_time, 'MMMM') MMMM               --January,February,.....,December
+      FORMAT(creation_time, 'MM-dd-yyy') USA_Format    --'12-31-2026'
+      FORMAT(creation_time, 'dd-MM-yyy') EU_Format    --'31-12-2026'
+   FROM Sales.orders
+```
+
+```sql
+   -- Task : Show creation_time using the following format: Day Wed Jan Q1 2026 12:34:56 PM
+
+   SELECT
+      creation_time,
+      'DAY '+ FORMAT(creation_time'ddd MMM') + ' Q'+DATENAME(quarter, creation_time)+' '+format(creation_time, 'yyyy hh:mm:ss tt') as customFormat
+   FROM Sales.orders
+```
+
+**Use case of Formatting** : Data Aggregations and Data Standardization
+
+**1. Data Aggregations**
+
+Reports : Sales by Month and 2 digit for year like : Jan 26, Feb 26, Mar 26,.....,Dec <br/>
+Once we change the format like Jan 26 and then do data aggregation, we will have a nice report about sales.
+
+```sql
+   SELECT
+      FORMAT(order_date, 'MMM yy') order_date
+      COUNT(*)
+      FROM Sales.orders
+      GROUP BY FORMAT(order_date, 'MMM yy')
+```
+
+**2. Data Standardization**
+
+Data could be store in different technology like .csv file or we can get data by using an API call or data coulde be stored in another database. <br/>
+So, what we usually do, go and extract the data from these different sources into one centre storage. <br/>
+It could have been you're getting different format for the date. Of course, this is a problem for Analytics we can't present different formats of date. <br/>
+So, What we can do here is clean the format into one standard format. means we have to format incoming data into a new format. <br/>
+Once, we have one standard format, we can use it in Analytics & Report. <br/>
+This is very common use case in data preparation and in data clean up by standardizing the different format into one. 
+
+
+### ALL FORMATS (Date & Time Format Specifiers)
+
+'2025-08-20 18:55:45'
+
+|   Format   | Description                     |  Result                            |
+|------------|---------------------------------|------------------------------------|
+| D          | Full day name                   |                                    |
+| d          | Day of the month                | 8/20/2025                          |
+| dd         | Day of the month (2 digit)      | 20                                 |
+| ddd        | Abbreviated day name            | Wed                                |
+| dddd       | Full day name                   | Wednesday                          |
+| M          | Month number                    | 44044                              |
+| MM         | Month number (2 digit)          | 8                                  |
+| MMM        | Abbreviated month name          | Aug                                |
+| MMMM       | Full month name                 | August                             |
+| yy         | Year (2 digit)                  | 25                                 |
+| yyyy       | Year (4 digit)                  | 2025                               |
+| hh         | Hour (12-hour format, 2 digit)  | 06                                 |
+| HH         | Hour (24-hour format, 2 digit)  | 18                                 |
+| m          | Minutes                         | August 20                          |
+| mm         | Minutes (2 digit)               | 55                                 |
+| s          | Seconds                         | 2025-08-20T18:55:45                |
+| ss         | Seconds(2 digit)                | 45                                 |
+| f          | Fractional seconds (1 digit)    | Wednesday, August 20, 2025 6:55 PM |
+| ff         | Fractional seconds (2 digit)    | 00                                 |
+| fff        | Fractional seconds (3 digit)    | 000                                |
+| tt         | AM/PM designator                | PM                                 | 
+
+Not only dates we can format number as well like 1234.56
+
+|   Format  | Description           |  Query                                  |   Result    |
+|-----------|-----------------------|-----------------------------------------|-------------|
+| N         | Numeric default       | ```SELECT FORMAT(1234.56,'N')```        | 1234.56     |
+| P         | Percentage            | ```SELECT FORMAT(1234.56,'P')```        | 123,456.00% |
+| C         | Currency              | ```SELECT FORMAT(1234.56,'C')```        | $1234.56    |
+| E         | Scientific notation   | ```SELECT FORMAT(1234.56,'E')```        | 123E+09     |
+| F         | Fixed-point           | ```SELECT FORMAT(1234.56,'F')```        | 1234.56     |
+| N0        | Numeric no decimal    | ```SELECT FORMAT(1234.56,'N0')```       | 1234        | 
+| N1        | Numeric one decimal   | ```SELECT FORMAT(1234.56,'N1')```       | 1234.5      |
+| N2        | Numeric two decimals  | ```SELECT FORMAT(1234.56,'N2')```       | 1234.56     |
+| N, de_DE  | Numeric (German)      | ```SELECT FORMAT(1234.56,'N','de_DE')```| 1.234.56    |
+| N, en_US  | Numeric (US)          | ```SELECT FORMAT(1234.56,'N','en-US')```| 1,234.56    |
+
+<!------------------------------------>
+
+### ```CONVERT( )```
+
+- ```CONVERT()``` converts a date or time value to a different data type & helps in formatting the value.
+  
+Synatx : 
+```sql
+       CONVERT(data_type, value, [style])  --[style is optional] & Default value of style is 0
+
+       CONVERT(INT, '124')
+       CONVERT(VARCHAR, order_date, '34')  -- convert order_date in VARCHAR using style '34'
+```
+
+```sql
+SELECT 
+     CONVERT (INT, '123') AS [String to Int CONVERT],     --Here, we can use [ ] to take space in your column name.
+
+     CONVERT(DATE, '2026-12-31') AS [String to Date CONVERT],     --Casting 
+     creation_time,
+     CONVERT(DATE, creation_time) AS [Datetime to Date CONVERT],  --Casting 
+     CONVERT(VARCHAR, creation_time, 32) AS [USA Std. Style:32],  --Casting + formating in one function
+     CONVERT(VARCHAR, creation_time, 32) AS [EURO Std. Style:34]  --Casting + formating in one function
+FROM Sales.orders
+```
+
+## ```CONVERT()``` ALL STYLES
+
+Date 
+
+| Style Num |   Format    | Example      |
+|-----------|-------------|--------------|
+| 1         | mm/dd/yy    | 12/30/25     |
+| 2         | yy.mm.dd    | 25.12.31     |
+| 3         | dd/mm/yy    | 27/11/2029   |
+| 4         | dd.mm.yy    | 31.12.2027   |
+| 5         | dd-mm-yy    | 30/12/2026   |
+| 6         | dd-Mon-yy   | 31-Dec-25    |
+| 7         | Mon dd,yy   | Dec 31, 25   |
+| 10        | mm-dd-yy    | 12-30-25     |
+| 11        | yy/mm/dd    | 25/12/1930   |
+| 12        | yymmdd      | 251230       |
+| 23        | yyyy-mm-dd  | 2025-12-30   |
+| 31        | yyyy-dd-mm  | 2025-30-12   |
+| 32        | mm-dd-yyyy  | 12-30-2025   |
+| 33        | mm-yyyy-dd  | 12-2025-30   |
+| 34        | dd/mm/yyyy  | 30/12/2026   |
+| 35        | dd-yyyy-mm  | 30-2025-12   |
+| 101       | mm/dd/yyyy  | 12/30/2025   |
+| 102       | yyyy.mm.dd  | 2025.12.30   |
+| 103       | dd/mm/yyyy  | 30/12/2026   |
+| 104       | dd.mm.yyyy  | 30.12.2026   |
+| 105       | dd-mm-yyyy  | 30-12-2026   |
+| 106       | dd-Mon-yy   | 30 Dec-25    |
+| 107       | Mon dd,yyyy | Dec 30, 2026 |
+| 110       | mm-dd-yyyy  | 12-30-2026   |
+| 111       | yyyy/mm/dd  | 30/12/2026   |
+| 112       | yyyymmdd    | 20261230     |
+
+Time
+
+| Style num | Formnat         | Example      |
+|-----------|-----------------|--------------|
+| 8         | hh:mm:ss        | 00:38:54     | 
+| 14        | hh:mm:ss:nnn    | 00:38:54:840 |
+| 24        | hh:mm:ss        | 00:38:54     |
+| 108       | hh:mm:ss        | 00:38:54     |
+| 114       | hh:mm:ss:nnn    | 00:38:54:840 |
+
+Datetime2
+
+| Style num | Formnat         | Example      |
+|-----------|-----------------|--------------|
+| 0         | 
+| 9         |
+| 13        |
+| 20        |
+| 21        |
+| 22        |
+| 25        |
+| 26        |
+| 27        |
+| 28        |
+| 29        |
+| 30        |
+| 100       |
+| 109       |
+| 113       |
+| 120       |
+| 121       |
+| 126       |
+| 127       |
 
 <!------------------------------------------------------>
 **String Functions**
