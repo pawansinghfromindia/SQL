@@ -833,7 +833,7 @@ SELECT
 FROM Sales.orders
 ```
 
-## ```CONVERT()``` ALL STYLES
+### ```CONVERT()``` ALL STYLES
 
 Date 
 
@@ -876,31 +876,242 @@ Time
 | 108       | hh:mm:ss        | 00:38:54     |
 | 114       | hh:mm:ss:nnn    | 00:38:54:840 |
 
-Datetime2
+Datetime2  :  '2026-08-20 18:55:45.840'
 
-| Style num | Formnat         | Example      |
-|-----------|-----------------|--------------|
-| 0         | 
-| 9         |
-| 13        |
-| 20        |
-| 21        |
-| 22        |
-| 25        |
-| 26        |
-| 27        |
-| 28        |
-| 29        |
-| 30        |
-| 100       |
-| 109       |
-| 113       |
-| 120       |
-| 121       |
-| 126       |
-| 127       |
+| Style num | Formnat                       | Example                   |
+|-----------|-------------------------------|---------------------------|
+| 0         | Mon dd yyyy hh:mm AM/PM       | Dec 30 2026 12:38AM       |
+| 9         | Mon dd yyyy hh:mm:ss:nnn AM/PM| Dec 30 2026 12:38:54:840AM|
+| 13        | dd Mon yyyy hh:mm:ss:nnn AM/PM| 30 Dec 2026 00:38:54:840AM|
+| 20        | yyyy-mm-dd hh:mm:ss           | 2026-12-30 00:38:54       |
+| 21        | yyyy-mm-dd hh:mm:ss:nnn       | 2026-12-30 00:38:54.840   |
+| 22        | mm/dd/yy hh:mm:ss AM/PM       | 12/30/26 12:38:54 AM      |
+| 25        | yyyy-mm-dd hh:mm:ss:nnn       | 2026-12-30 00:39:54.840   |
+| 26        | yyyy-dd-mm hh:mm:ss:nnn       | 2026-30-12 00:39:54.840   |
+| 27        | mm-dd-yyyy hh:mm:ss:nnn       | 12-30-2026 00:39:54.840   |
+| 28        | mm-yyyy-dd hh:mm:ss:nnn       | 12-2026-30 00:39:54.840   |
+| 29        | dd-mm-yyyy hh:mm:ss:nnn       | 30-12-2026 00:39:54.840   |
+| 30        | dd-yyyy-mm hh:mm:ss:nnn       | 30-2026-12 00:39:54.840   |
+| 100       | Mon dd yyyy hh:mm: AM/PM      | Dec 30 2026 12:38AM       |
+| 109       | Mon dd yyyy hh:mm:ss:nnn AM/PM| Dec 30 2026 12:38:54:840AM|
+| 113       | dd Mon yyyy hh:mm:ss:nnn      | 30 Dec 2026 00:38:54:840  |
+| 120       | yyyy-mm-dd hh:mm:ss           | 2026-12-30 00:38:54       |
+| 121       | yyyy-mm-dd hh:mm:ss:nnn       | 2026-12-30 00:38:54.840   |
+| 126       | yyyy-mm-dd T hh:mm:ss:nnn     | 2026-12-30T00:38:54.840   |
+| 127       | yyyy-mm-dd T hh:mm:ss:nnn     | 2026-12-30T00:38:54.840   |
+ 
+<!------------------------------------------------------>
+
+### ```CAST( )```
+
+- ```CAST()``` converts a value to a specified data type.
+
+Syntax :
+```sql
+     CAST(value AS data_type)
+
+     CAST('123' AS INT)
+     CAST('2026-12-31' AS DATE)
+```
+> No format can be specified.
+
+```sql
+      SELECT
+           CAST('123' AS INT) AS [String to Int],
+           CAST(123 AS VARCHAR) AS [Int to String],
+           CAST('2026-12-31' AS DATE) AS [String to Date],
+           CAST('2026-12-31' AS DATETIME2) AS [String to Datetime],
+           creation_time,
+           CAST(creation_time AS DATE) AS [Datetime to Date]
+    FROM Sales.orders
+```
+> ```CAST()``` is an very simple & amazing function. We can use it only to changing the data type from one to another. This doesn't change the format.
 
 <!------------------------------------------------------>
+
+**```FORMAT()``` vs ```CONVERT()``` vs ```CAST()```**
+
+- Using these 3 functions we can do 2 things either casting or formating.
+
+|                |    CASTING              |    Formating                         |
+|----------------|-------------------------|--------------------------------------|
+| ```CAST()```   | Any type to Any type    |  No Formating                        |
+|```CONVERT()``` | Any type to Any type    | Formats only Date & Time, Not Numbers|
+| ```FORMAT()``` | Any type to only String | Formats both Date & Time and Numbers |
+
+We have learned how to do formatting & casting on date information.
+Now we will see how to do Date calculation or mathematical operations on Dates
+
+<!------------------------------------------------------>
+
+##  DATE & TIME : Calculations -> ```DATEADD()``` & ```DATEDIFF()```
+
+How to do Date calculation or mathematical operations on Dates?
+
+### ```DATEADD()```
+- ```DATEADD()``` allows us to adds or subtracts a specific time interval to/from a date.
+- '2026-08-20' **Add 2 years** to this date = '**2028**-08-20'
+- '2026-08-20' **Add 3 months** to this date = '2026-**11**-20'
+- '2026-08-20' **Add 5 days** to this date = '2026-08-**25**'
+- '2026-08-20' **Subtract 2 years** to this date = '**2024**-08-20'
+- '2026-08-20' **Subtract 3 months** to this date = '2026-**05**-20'
+- '2026-08-20' **Subtract 5 days** to this date = '2026-08-**15**'
+
+Syntax :
+``sql
+     DATEADD(part, interval, date)
+
+     DATEADD(year, 2, '2026-08-20'),  --'2028-08-20'
+     DATEADD(month, -4, '2026-08-20'),  --'2026-04-20'
+     DATEADD(day, 2, '2026-08-20'),  --'2026-08-22'
+```
+
+``sql
+    SELECT
+        order_id,
+        order_date,
+        DATEADD(YEAR, 2, order_date)  AS twoYearsLater,
+        DATEADD(MONTH, 3, order_date)  AS threeMonthsLater,
+        DATEADD(DAY, 5, order_date)  AS fiveDaysLater,
+        DATEADD(DAY, -10, order_date)  AS tenDaysBefore,
+    FROM Sales.orders
+```
+### ```DATEDIFF()```
+- DIFF stands for Diiference, ```DATEDIFF()``` allows us to find the difference between two dates.
+- '2026-05-20' ```DATEDIFF()``` '2027-02-01' in Year is 1
+- '2026-05-20' ```DATEDIFF()``` '2027-02-01' in Month is 9
+- '2026-05-20' ```DATEDIFF()``` '2027-02-01' in Day is 257
+
+Syntax :
+```sql
+     DATEDIFF(part, start_date, end_date)
+
+     DATEDIFF(year, '2026-05-20', '2027-02-01')
+     DATEDIFF(year, order_date, ship_date)
+     DATEDIFF(day, order_date, ship_date)
+```
+
+```sql
+   --Task : Calculate the age of an employee
+
+    SELECT
+         employee_id,
+         birth_date,
+         DATEDIFF(year, birth_date, GETDATE()) AS age
+    FROM Sales.employees
+
+  --Task : Find the average shipping duration in days for each month
+
+   SELECT
+        order_id,
+        order_date,
+        ship_date, 
+        DATEDIFF(day, order_date, ship_date) AS dayToShip,
+   FROM Sales.orders
+
+   SELECT
+        MONTH(order_date) as Months,  --MONTHNAME(order_date) 
+        AVG( DATEDIFF(day, order_date, ship_date) ) AS avgShip,
+   FROM Sales.orders
+   GROUP BY MONTH(order_date)
+```
+
+> ```DATEDIFF()``` is very strong function in order to do Data Analytics using the dates information.
+
+```sql
+   -- Time Gap Analysis : Done using Window Function LAG() and DATEDIFF()
+   -- Task : Find the number of days between each order and previous order.
+
+   SELECT
+         order_id,
+         order_date current_order_date,
+         --in order to get previous order_date from order_date is use window function LAG() which access a value from the previous row.
+         LAG(order_date) OVER(ORDER BY Order_date) previous_order_date,
+         DATEDIFF(day, previous_order_date, order_date) AS numOfDaysBetweenOrderDateAndPrevOrderDate
+   FROM Sales.orders
+```
+
+<!------------------------------------------------------->
+
+##  DATE & TIME : Validation ```ISDATE()```
+
+- ```ISDATE()``` checks if a value is a date.
+  - Return 1 if the string value is a valid date.
+  - Return 0 if the string value is not a valid date.
+
+Syntax :
+```sql
+       ISDATE(value)
+
+       ISDATE('2026-01-31')   --True 1
+       ISDATE(2026')          --True 1
+```
+
+```sql
+       SELECT
+               ISDATE('123') dateCheck1,         --0
+               ISDATE('2026-01-31') dateCheck2,  --1
+               ISDATE('31-01-2026') dateCheck3,  --0 bcuz SQL doesn't understand the all formats of date 
+               ISDATE('2026') dateCheck4,        --1
+               ISDATE('08') dateCheck5,          --0 bcuz SQL only allow to check year not month
+```
+
+```sql
+-- Cast the value of string into Date datatype of a corrupt data.
+
+SELECT
+      order_date,
+      CAST(order_date AS DATE) new_order_date
+FROM
+(      SELECT '2026-08-20' as order_date
+       UNION
+       SELECT '2026-08-21'
+       UNION
+       SELECT '2026-08-23'
+       UNION
+       SELECT '2026-08'     --Here, we have data quality problem
+)
+
+-- SQL failed to do so.
+-- How to handled this?
+-- We can solve this prolem using ISDATE()
+
+SELECT
+      order_date,
+      ISDATE(order_date), 
+      CASE WHEN ISDATE(order_date) = 1 THEN CAST(order_date AS DATE) END new_order_date
+FROM
+(      SELECT '2026-08-20' as order_date
+       UNION
+       SELECT '2026-08-21'
+       UNION
+       SELECT '2026-08-23'
+       UNION
+       SELECT '2026-08'     --Here, we have data quality problem
+)
+
+--That's done successfully!
+-- If you want to see all the data that are corrupted use WHERE ISDATE(order_date) = 0
+-- And if you want the other value instead of NULL, Put ELSE in case condtion like
+-- CASE WHEN ISDATE(order_date) = 1 THEN CAST(order_date AS DATE)
+-- ELSE '9999-01-01'
+-- END new_order_date
+```
+
+**Summary of DATE & TIME Functions :**
+
+We have learned 13 different date & time functions. <br/>
+How to extract date parts using **Part Extraction** & when to use which one. <br/>
+How to change date format from one to another as well as data type of one from another using **Format & Casting** <br/>
+How to do **mathematical calculations** on dates? <br/>
+How to validate a value whether date or not using **Validation** <br/>
+Part Extraction : ```DAY()```, ```MONTH()```, ```YEAR()```, ```DATEPART()```, ```DATENAME()```, ```DATETRUNC()```, ```EOMONTH()``` <br/>
+Format & Casting : ```FORMAT()```, ```CONVERT()```, ```CAST()``` <br/>
+Calculations : ```DATEADD()```, ```DATEDIFF()``` <br/>
+Validation : ```ISDATE()``` <br/>
+
+<!------------------------------------------------------->
+
 **String Functions**
 
 |  Manipulation | Calculation | String Extraction |
@@ -938,6 +1149,271 @@ Datetime2
 <details>
   <summary><b> NULL Functions </b></summary>
 
+Here, We will learn about NULL Functions in order to handle NULLs inside the tables.
+
+Let's talk about a Registration Form. There we have many fields in which some are required* mandatory and some are optional.
+So when we insert those data into database, so if optional field is not provided by user then we save it as NULL in the database.
+This is what NULL in SQL.
+
+**What is ```NULL```?**
+- ```NULL``` means nothing, unknown.
+- ```NULL``` is not equal to anything.
+  - ```NULL``` is not Zero (0)
+  - ```NULL``` is not empty string ('')
+  - ```NULL``` is not blank space (' ')
+  - ```NULL``` is not string ('NULL')
+
+**```NULL``` Functions**
+
+```NULL()``` is a special SQL function in order to handle the NULLs indside the database. <br/>
+
+In a scenaria where a table contains NULL, we have NULLs inside table. <br/>
+We want to remove NULL, and replace it with a new value like 40. <br/>
+In order to do that we have 2 functions : <br/>
+1. ```ISNULL()``` 
+2. ```COALESCE()```
+
+ NULL -> ```ISNULL()```  or ```COALESCE()``` -> 40
+
+In another scenaria, we have a value 40 and we want to make it as NULL. <br/>
+Here, We're doing opposite, we are replacing the value 40 with NULL. <br/>
+For that we have a SQL Function ```NULLIF()```. <br/>
+
+40 -> ```NULLIF()```  -> NULL
+
+> In order to manipulate data from NULL to Value or Value to NULL we have these 3 SQL functions ```ISNULL()```  or ```COALESCE()``` and ```NULLIF()```.
+
+
+In other scenarios, where we don't want to manipulate anything. <br/>
+We just want to check whether the value is NULL or not. <br/>
+For that we have function ```IS NULL()``` return TRUE and ```IS NOT NULL()``` return FASLE <br/>
+
+|                   |               | NULL Functions                            |
+|-------------------|---------------|-------------------------------------------|
+| Replace Values  : | NULL to Value | ```ISNULL()``` or ```COALSCE()```         |
+| Replace Values  : | Value to NULL | ```NULLIF()```                            |
+| Check for NULLS : | Value to NULL | ```ISNULL()``` and   ```IS NOT NULL()```  |
+
+
+**```ISNULL()```**
+- ```ISNULL()``` replaces `NULL` with a specified value.
+Syntax :
+```sql
+    ISNULL(value, replacement_value)
+
+    ISNULL(shipping_address, 'N/A')       --Here, we're replacing NULL with a static value
+  
+    ISNULL(shipping_address, billing_address) --Here, we're replacing NULL with another column which is second address
+```
+How it works? <br/>
+Here, We're checking whether the value is NULL if it is Yes then get value from replacement and if value is not NULL then show the va;ue itself.
+
+Scenario 1:
+
+| order_id | shipment_adderess|  ->  | ```ISNULL()``` : Result |
+|----------|------------------|------|--------|
+| 1        | abc              |  ->  | abc    |
+| 2        | NULL             |  ->  | N/A    |
+
+Scenario 2 :
+
+| order_id | shipment_adderess| billing_address |  ->  | ```ISNULL()``` : Result |
+|----------|------------------|-----------------|------|--------|
+| 1        | abc              |  xyz            |  ->  | abc    |
+| 2        | NULL             |  pqr            |  ->  | pqr    |
+| 3        | NULL             |  NULL           |  ->  | NULL   |
+
+
+**```COALESCE()```**
+- ```COALESCE()``` returns the first non-null value from a list.
+Syntax :
+```sql
+      COALESCE(value1, value2, value3, .......)
+
+     COALESCE(shipping_address, 'N/A')
+     COALESCE(shipping_address, billing_address)
+     COALESCE(shipping_address, billing_address, 'N/A')
+```
+
+How it works? <br/>
+
+| order_id | shipment_adderess| billing_address |  ->  | ```COALESCE()``` : Result |
+|----------|------------------|-----------------|------|---------------------------|
+| 1        | abc              |  xyz            |  ->  | abc    |
+| 2        | NULL             |  pqr            |  ->  | pqr    |
+| 3        | NULL             |  NULL           |  ->  | N/A    |
+
+**```ISNULL()``` vs ```COALESCE()```***
+
+| ```ISNULL()```                             | ```COALESCE()```         |
+|--------------------------------------------|--------------------------|
+| Limited to two values                      | Unlimited                |
+| Faster                                     | Slower                   |
+| Different keywords for different databases | same for every databases |
+| SQL Server -> ```ISNULL()```               |    ```COALESCE()```      |
+| Oracle     -> ```NVL()```                  |    ```COALESCE()```      |
+| MySQL      -> ```IFNULL()```               |    ```COALESCE()```      |
+
+> Always use  ```COALESCE()```  instead of  ```ISNULL()``` bcuz  ```COALESCE()``` is available in all databases.
+
+### **Use cases of  ```COALESCE()``` and  ```ISNULL()```**
+
+We mainly use ```COALESCE()``` and  ```ISNULL()``` in order to handle NULL before doing any SQL task.
+
+**1. Handle the NULL before doing data aggregations**
+
+If we have 3 cells one contains 15, second 25 and third NULL. If we aggregate it with function like ```AVG()``` SQL will calculate like (15+25)/2 = 20 which should be (15+25+0)/3 = 13.33 similar way ```SUM()``` or ```COUNT(sales)``` OR ```MIN()``` OR ```MAX()``` except we are doing ```COUNT(*)```
+
+In scenario where business understand NULL as 0 , then you can have problem with the result of Analysis if you don't handle the NULLs. So, what we have to do is handle the NULLs before aggregation. So, we will replace NULL with 0 either by using ```ISNULL()``` or ```COALESCE()```.
+
+```sql
+   --Task : Find the average score of the customers.
+    --We should also have to consider the NULL scores as 0 if it is there in that case below
+
+    SELECT
+        customer_id,
+        score,
+        COALESCE(score,0) score2,
+        AVG(score) OVER() avgScore                            --window function
+        AVG(COALESCE(score,0)) OVER() avgScoreWithNull
+    FROM Sales.customers
+    GROUP BY customer_id
+```
+
+**2. Handle the NULL before doing any mathematical operations.**
+
+e.g. :
+ ```
+      1 + 5 = 6
+     0  + 5 = 5
+   NULL + 5 = ?
+   NULL + anything = NULL
+
+    'A'  +  'B' = 'AB'
+    ''   +  'B' = 'B'
+    NULL +   B   = NULL
+```
+
+```sql
+   -- Task : Display the full name of the customers in a single field by merging their first and last names,
+   --       and add 10 bonus points to each customer's score.
+
+   SELECT
+        first_name,
+        last_name,
+        first_name + ' ' + last_name AS fullname,          --CONCAT(first_name, ' ' ,last_name) 
+        score,
+        score + 10 AS new_score
+   FROM Sales.customers
+
+   --This will do the job but if the any value is found NULL then it will be result into NULL
+   -- To handle this, we have to use ISNULL() or COALESCE() in order to replace NULL with 0 or ''
+
+   SELECT
+        first_name,
+        COALESCE(first_name, '') AS first_name2,
+        last_name,
+        COALESCE(last_name, '') AS last_name2
+        COALESCE(first_name, '') + ' ' + COALESCE(last_name, '') AS fullname,          --CONCAT(first_name, ' ' ,last_name) 
+        score,
+        COALESCE(score, 0) AS score2,
+        COALESCE(score, 0) + 10 AS score_WithBonus
+   FROM Sales.customers
+
+```
+
+**3. Handling the NULLs before joining(JOINs) tables**
+
+This is kind of advanced use case. <br/>
+Let's say we have 2 tables Table A & Table B. <br/>
+Now, we have to combine these 2 tables using ```JOINs```. <br/>
+In order to ```JOIN```, we have to specify the keys between the tables to join on it. <br/>
+If those keys don't have NULL inside it and all the data are filled then ```JOIN``` works perfectly and you will get expected result. <br/>
+But if there are some cases where keys are NULLs that means the value is missing & this is a problem, bcuz in the output you will get unexpected result as some records will be missing. <br/>
+So, To handle the NULLs inside the keys before doing the JOIN. <br/>
+We use ```ISNULL()``` or ```COALESCE()```. 
+
+Table 1 & Table 2
+
+| Year | Type | orders |   | Year | Type | Sales|
+|------|------|--------|---|------|------|------|
+|2025  | a    | 30     |   | 2024 | a    | 100  |
+|2025  | NULL | 40     |   | 2024 | NULL | 200  |
+|2026  | b    | 50     |   | 2025 | b    | 300  |
+|2026  | NULL | 60     |   | 2025 | NULL | 200  |
+
+```sql
+     SELECT 
+         a.year, a.type, a.order, b.sales
+     FROM table1 a
+     JOIN table2 b
+     ON a.year = b.year AND a.type = b.type
+```
+Result :
+
+| Year | Type | orders | Sales |
+|------|------|--------|-------|
+|2025  | a    | 30     |  100  |
+|2026  | b    | 50     |  300  |
+
+Even though keys are identical & matching but we're getting only 2 rows this is bcuz SQL can't compare NULL.
+So, here we are losing data. 
+
+> SQL can't compare NULL
+
+```sql
+     SELECT 
+         a.year, a.type, a.order, b.sales
+     FROM table1 a
+     JOIN table2 b
+     ON ISNULL(a.year, '') = ISNULL(b.year, '') AND ISNULL(a.type, '') = ISNULL(b.type, '')
+```
+Result :
+
+| Year | Type | orders | Sales |
+|------|------|--------|-------|
+|2025  | a    | 30     |  100  |
+|2025  | NULL | 40     |  200  |
+|2026  | b    | 50     |  300  |
+|2026  | NULL | 60     |  200  |
+
+
+**4. Handling the NULLs before Sorting data**
+
+If we have 3 cells one contains 15, second NULL and third 25. <br/>
+If we sort the data by the cells in ascending(lowest to highest) then SQL will show the NULLs at start. that's not bcuz NULL is the lowest value bcuz NULL has no value. <br/>
+SQL ORDER BY ASC  : NULL < 15 < 25      -> It's not bcuz NULL has the lowest value, bcuz NULL has no value. <br/>
+SQL ORDER BY DESC :   25 < 15  < NULL   -> It's not bcuz NULL has the lowest value, bcuz NULL has no value. <br/>
+
+```sql
+    --Task : Sort the customers from lowest to highest scores with NULLs appearing last.
+
+     SELECT
+          customer_id,
+          score
+     FROM Sales.orders
+     ORDER BY scores ASC
+
+   --Handling NULLs in sorting
+
+  --Lazy way by keeping Null as a static 99999 value
+    SELECT
+          customer_id,
+          score,
+          COALESCE(score, 99999) as score2
+     FROM Sales.orders
+     ORDER BY COALESCE(score, 99999) ASC
+
+  --Professional way 
+   SELECT
+          customer_id,
+          score,
+          --CASE WHEN score IS NULL THEN 1 ELSE 0 END AS flag
+     FROM Sales.orders
+     ORDER BY CASE WHEN score IS NULL THEN 1 ELSE 0 END AS flag, score ASC
+```
+
+**```NULLIF()```**
   
 </details>
 
