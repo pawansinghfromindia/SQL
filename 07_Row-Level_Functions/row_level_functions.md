@@ -1190,9 +1190,9 @@ For that we have function ```IS NULL()``` return TRUE and ```IS NOT NULL()``` re
 
 |                   |               | NULL Functions                            |
 |-------------------|---------------|-------------------------------------------|
-| Replace Values  : | NULL to Value | ```ISNULL()``` or ```COALSCE()```         |
+| Replace Values  : | NULL to Value | ```ISNULL()``` or ```COALESCE()```         |
 | Replace Values  : | Value to NULL | ```NULLIF()```                            |
-| Check for NULLS : | Value to NULL | ```ISNULL()``` and   ```IS NOT NULL()```  |
+| Check for NULLS : | Value to NULL | ```IS NULL()``` and   ```IS NOT NULL()```  |
 
 
 **```ISNULL()```**
@@ -1414,13 +1414,290 @@ SQL ORDER BY DESC :   25 < 15  < NULL   -> It's not bcuz NULL has the lowest val
 ```
 
 **```NULLIF()```**
+- ```NULLIF()``` compares two expressions returns :
+  - NULL if they are equal.
+  - First value, if they are not equal.
+
+Syntax:
+```sql
+     NULLIF(value1, value2)
+
+     NULLIF(shipping_address, 'unknown')              -- returning a static value
+     NULLIF(shipping_address, billing_addres)         -- returning another column
+```
+
+> ```NULLIF()``` takes only 2 arguments, unlike ```COALESCE()``` which can takes a list of arguments.
+
+```sql
+      NULLIF(price, -1)
+```
+
+|order_id | price |   | ```NULLIF()``` Result |
+|---------|-------|---|-----------------------|
+|  1      |  90   |   |        90             |
+|  2      |  -1   |   |        -1             |
+|  3      |       |   |       NULL            |
+
+- Here, we're replacing a real value to NULL.
+
+```sql
+     NULLIF(original_price, discount_price)
+```
+
+|order_id | original price |discount_price|   | ```NULLIF()``` Result |
+|---------|----------------|--------------|---|-----------------------|
+|  1      |  150           |    50        |   |        150            |
+|  2      |  250           |    250       |   |        NULL           |
+|  3      |  100           |    100       |   |        NULL           |
+
+
+Why do we need ```NULLIF()``` ? 
+- In order to highlight or flag special cases in our data.
+
+**Use cases of ```NULLIF()```**
+
+1. Preventing the error of Division By Zero
+
+```sql
+   --Task : FInd the sales price for each order by dividing the sales by the quantity.
+
+         SELECT
+              order_id,
+              qty,
+              sales,
+              sales / qty AS sales_price           --Error as Division by Zero
+         FROM Sales.orders
+
+        --To handle the Division by zero bcuz qty can be 0, we have to use NULLIF()
+
+         SELECT
+              order_id,
+              qty,
+              sales,
+              sales / NULLIF(qty, 0) AS sales_price      -- bcuz NULLIF makes o as NULL & If you do any operation with NULL it will be NULL only.
+         FROM Sales.orders
+```
+
+> It's better to get NULL than having an error of Division by zero.
+
+
+**```IS NULL``` and ```IS NOT NULL```**
+
+- ```IS NULL``` returns **TRUE** if the value is **NULL** otherwise it returns **FALSE**
   
+- ```IS NOT NULL``` returns **TRUE** if the value is not **NULL** otherwise it return **FALSE**
+
+Syntax :
+```sql
+       value IS NULL
+       value IS NOT NULL
+
+       shipping_address IS NULL
+       shipping_address IS NOT NULL
+```
+
+```sql
+       price IS NULL
+```
+
+How it works?
+
+| order_id | price  |   | ```IS NULL``` Result | ```IS NOT NULL``` Result|
+|----------|--------|---|----------------------|-------------------------|
+|    1     |  90    |   |   FALSE              |   TRUE                  |
+|    1     |  NULL  |   |   TRUE               |   FALSE                 |
+
+
+**Use cases of ```IS NULL``` and ```IS NOT NULL```** : Filtering Data ,ANTI JOINs
+
+1. Searching for missing information or searching for NULL & may be after that clean up data by removing NULLs from datasets.
+
+```sql
+    -- Task : Identify the customers who have no scores.
+
+       SELECT *
+       FROM Sales.customers
+       WHERE score IS NULL
+
+   -- Task : List all cusomers who have scores
+
+       SELECT *
+       FROM Sales.customers
+       WHERE score IS NOT NULL
+```
+
+2. Findinding the unmatched rows between two tables : LEFT ANTI JOIN | RIGHT ANTI JOIN
+
+> **LEFT ANTI JOIN** : All rows from the left table without matches the right table.
+
+```sql
+     --Task : List all details for customers who have not placed any order
+
+      SELECT
+           c.customer_id,
+           c.customer_name,
+           o.order_id 
+      FROM Sales.customers c
+      LEFT JOIN Sales.orders o
+      ON c.customer_id = o.customer_id
+      WHERE o.order_id IS NULL
+
+     --All rows from the left table (customers) without matches the right table(orders).
+```
+
+### NULL ```NULL``` vs Empty ```''``` vs Space ```' '```
+
+This is something which is very confusing for a lot of Developers and anyone who is working with data in databases in SQL.
+
+- ```NULL``` NULL means nothing, unknown.
+  
+- ```''``` Empty, String value that has zero character, Here we know the value that is nothing which means empty string.
+
+- ```' '``` Space, string value that has one space character or more than one depends on how long we press the spacebar.
+
+```sql
+
+     WITH orders AS (
+        SELECT 1 Id, A category
+        UNION
+        SELECT 2, NULL
+        UNION
+        SELECT 3, ''
+        UNION
+        SELECT 4, ' '      --one space
+        UNION
+        SELECT 5, '  '     --two space
+     )
+    SELECT *, DATALENGTH(category) as length
+    FROM orders
+```
+
+| Id  | category | length |
+|-----|----------|--------|
+| 1   |   A      |   1    |
+| 2   |  NULL    |  NULL  |
+| 3   |          |   0    |
+| 4   |          |   1    |
+| 5   |          |   2    |
+
+- It's really hard to detect the data quality issue when it is empty string or space/spaces by just looking at the result. So, To detect we can check length of the value.
+
+|               | NULL           | Empty String       |  Blank Space               |
+|---------------|----------------|--------------------|----------------------------|
+| Represntation | NULL           |    ```''```        | ```' '```                  |
+| Meaning       | Unknown        | Known, Empty value | Known, space value         |
+| Data type     | Special Marker | String, length=0   | String (length 1 or more)  |
+| Storage       | Very minimal   | Occupies memory    | Occupies memory each space |
+| Performance   | Best           | Fast               | Slow                       |
+| Comparison    | ```IS NULL```  | ```=''```          | ```=' '```                 |
+
+### Handling NULL Data Policies
+
+Why do we have to understand the differences between those stuffs like NULL, Empty string, space etc everything like similar?
+- In a project, we will be working on source data that has bad data quality & we might encounter these scenario.
+- If we don't do any Data preparation like cleaning the data by handling all those scenario and bring standards to your data, if you directly jump to source data you will providing inaccurate results in your report analysis which leads to a wrong business decision.
+- So, Preparing data before doing Analysis is very important step.
+
+Together with the stakeholders and users of reports & analyis, We have to define a clear Data Policy.
+
+**Data Policy** : Set of rules that defines how data should be handled.
+
+**Rule 1. Data POlicy : Only use NULLS and empty strings, but avoid blank spaces.**
+
+> ```TRIM()``` function remove unwanted leading & trailing spaces from a string.
+
+```sql
+     WITH orders AS (
+        SELECT 1 Id, A category
+        UNION
+        SELECT 2, NULL
+        UNION
+        SELECT 3, ''
+        UNION
+        SELECT 4, ' '      --one space
+        UNION
+        SELECT 5, '  '     --two space
+     )
+    SELECT *, TRIM(category) policy1, 
+    FROM orders
+
+   -- Now we are very sure either category will be NULL or empty string
+   -- Using only one single TRIM() function, cleaning up data & bringing standards.
+```
+
+**Rule 2. Data POlicy : Only use NULLS and avoid using empty strings and blank spaces.**
+
+```sql
+     WITH orders AS (
+        SELECT 1 Id, A category
+        UNION
+        SELECT 2, NULL
+        UNION
+        SELECT 3, ''
+        UNION
+        SELECT 4, ' '      --one space
+        UNION
+        SELECT 5, '  '     --two space
+     )
+    SELECT *,
+           TRIM(category) policy1,              --avoiding blank spaces(leading & trailing)
+           NULLIF(TRIM(category), '') policy2  --avoiding both empty string as well as blank spaces(leading & trailing)
+    FROM orders
+```
+
+**Rule 3. Data Policy : Use the default value 'unknown' and avoid using nulls, empty string and blank spaces**
+
+```sql
+     WITH orders AS (
+        SELECT 1 Id, A category
+        UNION
+        SELECT 2, NULL
+        UNION
+        SELECT 3, ''
+        UNION
+        SELECT 4, ' '      --one space
+        UNION
+        SELECT 5, '  '     --two space
+     )
+    SELECT *,
+           TRIM(category) policy1,                                    --avoiding blank spaces(leading & trailing)
+           NULLIF(TRIM(category), '') policy2,                        --avoiding both empty string as well as blank spaces(leading & trailing)
+           ISNULL(category, 'unknown') policy                         --avoiding even NULL, instead using default static string unknown using ISNULL()
+           COALESCE(NULLIF(TRIM(category), ''), 'unknown') policy3    --avoiding even NULL, instead using default static string unknown using COALESCE()
+    FROM orders
+```
+
+- These are three different ways to clean up data & bring data to it standards before reports & analysis.
+- which one should we use in project, It's really depends on business but try to avoid policy1, So we left with policy2 and policy3. We use both of them in different scenario. We normally go with policy2 bcuz It consumes less storage space as well as performance is fast.  
+
+Use case of Data Policy 2
+- replacing empty strings and blank spaces with NULL during the data preparation before inserting into a database to optimize storage & performance.
+
+Use case of Data Policy 3
+- Replacing empty string, blanks and NULL with the default value during data preparation before using it in reporting to improve readability and reduce confusion.
+
+### Summary of NULLs
+- NULLs are special markers in SQL in order to say no value or missing value or unknown.
+- Using NULLs can optimise storage save some spaces and provide strong performance in query.
+- In SQL, we have different functions in order to handle NULL
+  - ```COALESCE()``` | ```ISNULL()``` : replaces NULL to Value 
+  - ```NULLIF()``` : replaces Value to NULL
+  - ```IS NULL``` | ```IS NOT NULL``` : Check whether value is NULL or not & returns TRUE & FALSE.
+- Use cases of NULLs
+  - Handles NULL - Before Data Aggregation [ SUM(), AVG(), COUNT(), MAX(), MIN() ]
+  - Handles NULL - Before Mathematical Operations [+, -, *, / ]
+  - Handles NULL - Before Joining Tables
+  - Handles NULL - Before Sorting Data
+  - Finding unmatched Data - LEFT ANTI JOIN (```LEFT JOIN + IS NULL``` ) | RIGHT ANTI JOIN (```RIGHT JOIN + IS NULL``` )
+  - Data Policies [NULLs, Default Value = 'unknown']
+
 </details>
 
 <!------------------------------------------->
 <details>
   <summary><b> CASE Statement </b></summary>
 
+This is very important tool in order to do Data Transformation
   
 </details>
 <!------------------------------------------->
