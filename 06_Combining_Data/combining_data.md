@@ -1444,4 +1444,4 @@ Because using column name makes more clear to read query and also if you want to
 
 <!---------Chapter 6. Combining Data----------------->
 
-[Filtering Data](https://github.com/pawansinghfromindia/SQL/blob/main/05_Filtering_Data/filtering_data.md) | [Row-Level functions]()
+[< Filtering Data](https://github.com/pawansinghfromindia/SQL/blob/main/05_Filtering_Data/filtering_data.md) | [Functions in SQL >](https://github.com/pawansinghfromindia/SQL/blob/main/07_Row-Level_Functions/row_level_functions.md)
