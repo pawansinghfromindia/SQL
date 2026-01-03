@@ -195,6 +195,29 @@ If we use ```Window Function```, It will execute each rows individually from eac
   
 </details>
  <!------------------------------------------------------------->
+<details>
+  <summary>Window functions</summary>
+ 
+- Window functions perform calculations within a window. 
+- We have a long group of Window functions. We categorized them in 3 groups :
+
+1. **Window Aggregate Functions** : used for Aggregations
+2. **Window Rank Functions** : used for ranking data
+3. **Window Value(Analytical) Functions** : used for access specific value
+
+| Window <br/> Aggregate Functions  | Window <br/> Rank Functions   | Window <br/> Value (Analytical) Functions             |
+|-----------------------------------|-------------------------------|-------------------------------------------------------|
+| ```COUNT()```  -> All data types  | ```ROW_NUMBER()```   -> Empty |  ```LEAD(expr, offset, default)```  -> All data types |
+| ```SUM()```    -> Numeric         | ```RANK()```         -> Empty |  ```LAG(expr, offset, default)```   -> All data types |
+| ```AVG()```    -> Numeric         | ```DENSERANK()```    -> Empty |  ```FIRST_VALUE(expr)```            -> All data types |    
+| ```MAX()```    -> Numeric         | ```CUME_DIST()```    -> Empty |  ```FIRST_VALUE(expr)```            -> All data types |
+| ```MIN()```    -> Numeric         | ```PERCENT_RANK()``` -> Empty |                                     -> All data types |   
+|                                   | ```PERCENT_RANK()``` -> Empty |                                     -> All data types |  
+|                                   | ```NTILE(n)```       -> Number|                                     -> All data types |   
+
+</details>
+
+<!-------------------------------------------------------------->
 
 <details>
   <summary><b>Why do we need Window Functions?</b></summary>
@@ -284,21 +307,24 @@ Mainly we have 2 parts :
 
 <details>
   <summary>Window functions</summary>
+ 
 - Window functions perform calculations within a window. 
 - We have a long group of Window functions. We categorized them in 3 groups :
+
 1. **Window Aggregate Functions** : used for Aggregations
 2. **Window Rank Functions** : used for ranking data
 3. **Window Value(Analytical) Functions** : used for access specific value
 
-| Window <br/> Aggregate Functions  | Window <br/> Rank Functions  | Window <br/> Value (Analytical) Functions |
-|-----------------------------------|------------------------------|-------------------------------------------|
-| ```COUNT()```                     | ```ROW_NUMBER()```           |  ```LEAD(expr, offset, default)```        |
-| ```SUM()```                       | ```RANK()```                 |  ```LAG(expr, offset, default)```         |
-| ```AVG()```                       | ```DENSERANK()```            |  ```FIRST_VALUE(expr)```                  |
-| ```MAX()```                       | ```CUME_DIST()```            |  ```FIRST_VALUE(expr)```                  |
-| ```MIN()```                       | ```PERCENT_RANK()```         |                                           |
-|                                   | ```PERCENT_RANK()```         |                                           |
-|                                   | ```NTILE(n)```               |                                           |
+| Window <br/> Aggregate Functions  | Window <br/> Rank Functions   | Window <br/> Value (Analytical) Functions             |
+|-----------------------------------|-------------------------------|-------------------------------------------------------|
+| ```COUNT()```  -> All data types  | ```ROW_NUMBER()```   -> Empty |  ```LEAD(expr, offset, default)```  -> All data types |
+| ```SUM()```    -> Numeric         | ```RANK()```         -> Empty |  ```LAG(expr, offset, default)```   -> All data types |
+| ```AVG()```    -> Numeric         | ```DENSERANK()```    -> Empty |  ```FIRST_VALUE(expr)```            -> All data types |    
+| ```MAX()```    -> Numeric         | ```CUME_DIST()```    -> Empty |  ```FIRST_VALUE(expr)```            -> All data types |
+| ```MIN()```    -> Numeric         | ```PERCENT_RANK()``` -> Empty |                                     -> All data types |   
+|                                   | ```PERCENT_RANK()``` -> Empty |                                     -> All data types |  
+|                                   | ```NTILE(n)```       -> Number|                                     -> All data types |   
+
 </details>
 
 - ```AVG(sales) OVER(ORDER BY order_date)``` : Here, ```AVG()``` function takes sales **column** as an argument. Arrument is what we pass to a function.
@@ -307,6 +333,286 @@ Mainly we have 2 parts :
 - ```NTEIL(2) OVER(ORDER BY order_date)``` : Here, ```NTEIL()``` function takes a **number** as an argument.
 - ```LEAD(sales, 2, 10) OVER(ORDER BY order_date)``` : Here, ```LEAD()``` function takes **multiple arhuments**
 - ```SUM(CASE WHEN sales>100 ThEN 1 ELSE 0 END) OVER(ORDER BY order_date)```, : Here, ```SUM()``` function takes **Conditional Logic** as an argument
+
+> Each function has its own specification, we have to be careful while which data type we're using with which function.
+
+**```over()``` Clause** : Tells SQL that the function used is a window function.
+ - ```over()``` Clause is used in order to define the window or subset of data.
+ - Inside it, we can define multiple stuffs like ```PARTITION BY```, ```ORDER BY```, even frame ```ROWS UNBOUNDED PRECEDING``` But all these are optional.
+
+
+### Window Function ```PARTITION BY```
+- It divides the entire datasets into windows(partitions)/groups
+- ```PARTITION BY``` divides the rows into groups, based on the column/s.
+- It is very similar to ```GROUP BY```
+
+```python
+    SUM(sales) OVER()          ##Sum will be calculated on entire dataset one window
+```
+
+```python
+    SUM(sales) OVER(PARTITION BY product)
+    ##PARTITION BY divides dataset into windows, so Sum will be calculated on individually on each window 
+```
+
+| Month | Product | Sales |
+|-------|---------|-------|
+| Jan   | Bottle  | 20    |
+| Jan   | Caps    | 10    |
+| Jan   | Bottle  | 30    |
+| Feb   | Gloves  | 5     |
+| Feb   | Caps    | 70    |
+| Feb   | Gloves  | 40    |
+
+Result of ```SUM(sales) OVER()``` : 175 (Entire dataset as a single window & Sum will be calculated)
+
+Result of ```SUM(sales) OVER(PARTITION BY product)``` : (Entire dataset is divided into multiple windows, sum will be calculated on each window)
+
+| Product | SUM(sales) |
+|---------|------------|
+| Bottle  | 50         |
+| Caps    | 80         |
+| Bottle  | 45         |
+
+Result of ```SUM(sales) OVER(PARTITION BY month)``` : (Entire dataset is divided into multiple windows, sum will be calculated on each window)
+
+| Month | SUM(sales) |
+|-------|------------|
+| Jan   | 60         |
+| Feb   | 115        |
+
+**Without ```PARTITION BY```** 
+```python 
+   SUM(sales) OVER()
+```
+- Total sales across all rows (Entire Result set)
+
+**```PARTITION BY``` single column** 
+```python 
+   SUM(sales) OVER(PARTITION BY product)
+```
+- Total sales for each product (multiple windows)
+
+**```PARTITION BY``` combined column** 
+```python 
+   SUM(sales) OVER(PARTITION BY product, order_status)
+```
+- Total sales for each combination of product and order_status (multiple windows)
+
+> Note : ```PARTITION BY``` is optional for all the windows functions.
+
+```python
+   # Task : Find the total sales across all orders,
+   #        Additionally provide details such as order_id and order_date
+
+  SELECT
+         order_id,
+         order_date,
+         SUM(sales) OVER() AS total_sales
+  FROM Sales.orders
+```
+
+```python
+   # Task : Find the total sales for each product,
+   #        Additionally provide details such as order_id and order_date
+
+  SELECT
+         product,
+         order_id,
+         order_date,
+         SUM(sales) OVER(PARTITION BY product) AS total_sales
+  FROM Sales.orders
+```
+```python
+   # Task : Find the total sales across all orders,
+   #        Find the total sales for each product
+   #        Additionally provide details such as order_id and order_date
+
+  SELECT
+         order_id,
+         order_date,
+         product,
+         sales,
+         SUM(sales) OVER() AS total_sales,
+         SUM(sales) OVER(PARTITION BY product) AS TotalSalesByProduct
+  FROM Sales.orders
+```
+
+> Flexibility of Window allows aggregation of data at different granularities within the same query.
+
+```python
+   # Task : Find the total sales for each combination of product and order_status,
+   #        Additionally provide details such as order_id and order_date
+
+  SELECT
+         product,
+         order_status,
+         order_id,
+         order_date,
+         SUM(sales) OVER(PARTITION BY product, order_status) AS TotalSalesByEachProductAndOrderStatus
+  FROM Sales.orders
+```
+
+### Window Function ```ORDER BY```
+- ```ORDER BY``` sort the data within a window. (Ascending | Descending)
+- ```ORDER BY``` is optional for Window Aggregate function but for Window Rank function & Window Value function ```ORDER BY``` is mandatory in query. bcuz It make no sense if we are ranking data with sorting it first.
+
+```python
+     RANK() OVER(PARTITION BY month ORDER BY sales DESC)
+```
+| Month | Product | Sales |
+|-------|---------|-------|
+| Jan   | Bottle  | 20    |
+| Jan   | Caps    | 10    |
+| Jan   | Bottle  | 30    |
+| Feb   | Gloves  | 5     |
+| Feb   | Caps    | 70    |
+| Feb   | Gloves  | 40    |
+
+Here, What this query will do is : first ```PARTITION BY``` is going to divide dataset into 2 partitions(months : 1 for Jan & another for Feb ) then ```ORDER BY``` sales in ```DESC``` order, So SQL will go each window seperately & start sorting data in desc order in the first window once it's done now It will sort the next window in desc order. Now Rank will rank the values in window one & similarly for window two as well. 
+
+| Month | Product | Sales | Rank |
+|-------|---------|-------|------|
+| Jan   | Bottle  | 30    |  1   |
+| Jan   | Bottle  | 20    |  2   |
+| Jan   | Caps    | 10    |  3   |
+|_______|_________|_______|______|
+| Feb   | Caps    | 70    |  1   |
+| Feb   | Gloves  | 40    |  2   |
+| Feb   | Gloves  | 5     |  3   |
+
+```python
+   # Task : Rank each order based on their sales from highest to lowest.
+   #        Additionally provide the details such as order_id, order_date.
+
+    SELECT
+         order_id,
+         order_date, 
+         RANK() OVER(ORDER BY sales DESC) AS order_rank
+    FROM Sales.orders
+```
+
+### Window Frame ```ROWS UNBOUNDED PRECEDING```
+- We call it **Window frame** or **frame clause**
+- Window Frame defines a subset of rows within each window that is relevant for the calculation.
+
+Let's understand How it works? <br/>
+If we do aggregation & we don't use window function, that means we are considering entire data (rows inside table). <br/>
+What we can do is divide the data by using ```PARTITION BY``` into multiple windows, suppose we have window1 and window2. Now if we do aggregation all the window1 will be aggregates & also window2 will be also aggregated. <br/>
+So, What we can say to SQL is, we dont't want all rows inside the window. We want subset of row inside the window. <br/>
+So, what we can do here is as we have 2 windows, now we can specify scope or subset of data from each window to be involve in aggregation. <br/>
+So, Here we will get Window inside a window this can be done using ```Window Frame``` clause. <br/>
+
+> ```PARTITION BY``` is used in order to divide entire dataset into multiple windows
+
+> ```FRAME``` clause is used if you don't want to consider all the rows in each window for calculation(aggregation). You just want to focus on specified subset of data in each window then we can use Frame clause.
+
+```python
+     AVG(sales) OVER (PARTITION BY category ORDER BY order_date ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+                                             
+```
+- ```ROWS``` is Frame Types, It can be of 2 types:
+  - 1. ```ROWS``` 
+  - 2. ```RANGE```
+      
+-  ```CURRENT ROW``` : Frame Boundary(Lower Value)
+   - ```CURRENT ROW```
+   - ```N PRECEDING```
+   - ```UNBOUNDED PRECEDING```
+     
+- ```UNBOUNDED FOLLOWING``` : Frame Boundary(Higher Value)
+  - ```CURRENT ROW```
+  - ```N FOLLOWING```
+  - ```UNBOUNDED FOLLOWING```
+
+As we can see, we are defining the boundary or range from low value to high value.
+
+> Rule 1 : Frame clause can only be used together with ```ORDER BY``` clause.
+> Rule 2 : Lower value must be before the higher value.
+
+```python
+    SUM(sales) OVER(ORDER BY month ROWS BETWEEN CURRENT ROW AND 2 FOLLOWING)
+```
+
+| Month | Sales |  Result |
+|-------|-------|---------|
+| Jan   | 20    |  60     |
+| Feb   | 10    |  45     |
+| Mar   | 30    |  105    |
+| Apr   | 5     |  75     |
+| Jun   | 70    |  70     |
+
+> ```n-FOLLOWING``` : nth row after the current row.
+
+Here, SQL will start with current_row which is row1 and 2 following that means after row1 two more rows i.e. row3
+So, in the scope row1 to row3,It will sum() the sales for the dataset.
+Next is current_row will move to row2 & after that 2 following which is after the current_row, so row2 & after that 2 more rows i.e. row4
+So, in the scope row2 to row4, it will sum() the sales for this dataset.
+And this will continue until current becomes last row
+
+```python
+    SUM(sales) OVER(ORDER BY month ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+```
+| Month | Sales |  Result |
+|-------|-------|---------|
+| Jan   | 20    |  135    |
+| Feb   | 10    |  115    |
+| Mar   | 30    |  105    |
+| Apr   | 5     |  75     |
+| Jun   | 70    |  70     |
+
+> ```UNBOUNDED FOLLOWING``` : The last possible row within a window.
+
+
+```python
+    SUM(sales) OVER(ORDER BY month ROWS BETWEEN 1 PRECEDING  AND CURRENT ROW)
+```
+> ```n PRECEDING ``` : The nth row before the current row.
+
+| Month | Sales |  Result |
+|-------|-------|---------|
+| Jan   | 20    |  20     |
+| Feb   | 10    |  30     |
+| Mar   | 30    |  40     |
+| Apr   | 5     |  35     |
+| Jun   | 70    |  75     |
+
+```python
+    SUM(sales) OVER(ORDER BY month ROWS BETWEEN UNBOUNDED PRECEDING  AND CURRENT ROW)
+```
+
+> ```UNBOUNDED PRECEDING``` : The first possible row within a window.
+
+| Month | Sales |  Result |
+|-------|-------|---------|
+| Jan   | 20    |  20     |
+| Feb   | 10    |  30     |
+| Mar   | 30    |  60     |
+| Apr   | 5     |  65     |
+| Jun   | 70    |  135    |
+
+
+```python
+    SUM(sales) OVER(ORDER BY month ROWS BETWEEN 1 PRECEDING  AND 1 FOLLOWING)
+```
+| Month | Sales |  Result |
+|-------|-------|---------|
+| Jan   | 20    |  30     |
+| Feb   | 10    |  60     |
+| Mar   | 30    |  45     |
+| Apr   | 5     |  105    |
+| Jun   | 70    |  75     |
+
+```python
+    SUM(sales) OVER(ORDER BY month ROWS BETWEEN UNBOUNDED PRECEDING  AND UNBOUNDED FOLLOWING)
+```
+| Month | Sales |  Result |
+|-------|-------|---------|
+| Jan   | 20    |  135    |
+| Feb   | 10    |  135    |
+| Mar   | 30    |  135    |
+| Apr   | 5     |  135    |
+| Jun   | 70    |  135    |
 
 </details>
 <!---------------------------------------------->
