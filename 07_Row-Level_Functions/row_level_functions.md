@@ -1697,10 +1697,309 @@ Use case of Data Policy 3
 <details>
   <summary><b> CASE Statement </b></summary>
 
-This is very important tool in order to do Data Transformation
-  
+This is very important tool in order to do Data Transformation.
+
+**```CASE``` Statement** 
+- ```CASE``` Statement allow us to build a condition logic in SQL query by Evalautes a list of conditions one by one and returns a value when the first condition is met.
+
+Synatx : 
+```CASE``` : The start of logic <br/>
+           ```WHEN``` <condition1> : Condition to be evaluated ```THEN```: result1 <br/>
+           ```WHEN``` <condition2> : Condition to be evaluated ```THEN```: result2 <br/>
+           ```ELSE``` result : Default value (Optional) only if none of the WHEN condition is true 
+```END```  : The End of logic <br/>
+```sql
+      CASE
+          WHEN <condition1> THEN result1
+          WHEN <condition2> THEN result2
+          WHEN <condition3> THEN result3
+          ELSE default_result
+      END
+```
+
+> SQL process conditions from Top to Bottom, means first condition1 will be checked, then condition2 , condition3 and so on and at last ELSE.
+
+> Order of condition is important in ```CASE WHEN THEN ELSE END```
+
+```sql
+      CASE
+          WHEN sales > 50 THEN 'High'
+      END 
+```
+
+How CASE Statement works?
+
+| sales | CASE : Result |
+|-------|---------------|
+| 60    | High          |
+| 30    | NULL          |
+| 50    | NULL          | 
+| 15    | NULL          |
+| NULL  | NULL          |
+
+> If you don't use ```ELSE```, you will get output as NULL. bcuz we didn't define the ELSE.
+
+```sql
+      CASE
+          WHEN sales > 50 THEN 'High'
+          WHEN sales > 20 THEN 'Medium'
+      END 
+```
+
+How CASE Statement works?
+
+| sales | CASE : Result |
+|-------|---------------|
+| 60    | High          |
+| 30    | Medium        |
+| 50    | Medium        | 
+| 15    | NULL          |
+| NULL  | NULL          |
+
+```sql
+      CASE
+          WHEN sales > 50 THEN 'High'
+          WHEN sales > 20 THEN 'Medium'
+          ELSE 'Low'
+      END 
+```
+
+How CASE Statement works?
+
+| sales | CASE : Result |
+|-------|---------------|
+| 60    | High          |
+| 30    | Medium        |
+| 50    | Medium        | 
+| 15    | Low           |
+| NULL  | Low           |
+
+### **Use case of ```CASE WHEN THEN ELSE END``` statement** <br/>
+
+The main purpose of ```CASE``` statement is to do Data Transformation. <br/>
+Data Transformation is very important process in each data project, using Data tranformation, we can generate(derive) new information. Like<br/>
+- Create new columns based on existing data using the case statement
+- This helps us to wtiting new information for analysis without modifying the source database, only for Analytics.
+
+**Use case 1. Categorizing Data**
+   - We use ```CASE``` statement in order to categorised data.
+   - Means, Group the data into different categories based on certain conditions.
+   - Why this use case is important?
+     - Classifying & Grouping data is classical fundamentals in Data Analysis & Reporting bcuz It makes data easier to understand & to track as well.
+     - It helps us aggregating the data based on category.
+    
+```sql
+   --Task : Generate a report showing the total sales for each category :
+          --High : If the sales higher than 50 
+          --Medium : If the sales between 20 and 50 
+          --Low : If the sales equal or lower than 20
+          -- Sort the category from lowest to highest sales
+
+SELECT 
+    category,
+    SUM(category) AS total_sales
+    FROM (  SELECT *,
+                CASE
+                  WHEN sales > 50 THEN 'High'
+                  WHEN sales > 20  THEN 'Medium'
+                  ELSE 'Low'
+               END  AS category  
+    FROM Sales.orders
+   )
+   GROUP BY category
+   ORDER BY total_sales DESC
+```
+
+**```CASE``` Statement Rules**
+> If you're using ```CASE``` statement, there is one rule to follow, The data type of results must be matching.
+
+```sql
+    CASE
+          WHEN sales > 50 THEN 'High'   --Here, Result data type is STRING
+          WHEN sales > 20 THEN 1        --Here, Result data type is INT
+          ELSE TRUE                     --Here, Result data type is BOOLEAN
+      END
+    --ERROR as Results data type is not matching
+```
+
+> We can use ```CASE``` statement with any clauses (SELECT,FROM,JOINs,GROUP BY, ORDER BY everywhere) & anywhere in the query.
+
+
+**Use case 2. Mapping Values**
+ - We can use ```CASE``` statement in order to map values.
+ - Transform the data from one form to another form to make it more readable & more usable for Analytics.
+ - Sometime, database developers stores the data values inside the database as Code & Flags. Example :
+   - Status of an order can be stored as 1 and 0 instead of active and inactive. This is a technique in order to optimize performace of database for application bcuz 1 and 0 is way faster than holding the string.
+
+ Table
+ 
+ |Order_id| order_date |status |       |      |
+|---------|------------|-------|-------|------|
+|         |            | 1     |       |      |
+|         |            | 0     |       |      |
+|         |            | 0     |       |      |
+|         |            | 1     |       |      |
+
+  - In reports It is nicer to show Active and Inactive instead of 0 and 1. So, here we use ```CASE``` statement in order to translates those crytical & technical values into readable terms. otherwise anyone who will see reports ask you what is o and 1?
+
+```sql
+   --Task : Retrieve employee details with gender displayed as full text
+
+    SELECT
+        employee_id,
+        employee_name,
+        gender,
+        CASE
+           WHEN gender = 'M' THEN 'Male'
+           WHEN gender = 'F' THEN 'Female'
+           ELSE 'Not Available'
+        END AS gender_fulltext
+   FROM Sales.employees
+```
+```sql
+   --Task : Retrieve employee details with abbreviated country code
+   -- Sometime in reports we don't have enough spaces in order to use whole fullname of a country so we use abbreviated code for them
+   --Get distinct country name from table using distinct country 
+
+    SELECT
+        employee_id,
+        employee_name,
+        country,
+        CASE
+           WHEN country = 'India' THEN 'IND' 
+           WHEN country = 'USA' THEN 'US'
+           WHEN country = 'Canada' THEN 'CA'
+           WHEN country = 'Japan' THEN 'JAP'
+           WHEN country = 'Europe' THEN 'EU'
+           ELSE 'N/A'
+        END AS country_code
+   FROM Sales.employees
+```
+
+**Special Syntax for ```CASE``` statement** when we're using it for mapping values repeatedly the column names.
+
+Full form Syntax :
+```sql
+         CASE
+            WHEN country = 'India' THEN 'IND' 
+            WHEN country = 'USA' THEN 'US'
+            WHEN country = 'Canada' THEN 'CA'
+            WHEN country = 'Japan' THEN 'JAP'
+            WHEN country = 'Europe' THEN 'EU'
+            ELSE 'N/A'
+        END AS country_code
+```
+
+Quick form Syntax : only one column & only equal operator 
+```sql
+         CASE country
+            WHEN 'India' THEN 'IND' 
+            WHEN 'USA' THEN 'US'
+            WHEN 'Canada' THEN 'CA'
+            WHEN 'Japan' THEN 'JAP'
+            WHEN 'Europe' THEN 'EU'
+            ELSE 'N/A'
+        END AS country_code
+```
+
+> We things get little bit complicated, where you have to mix & make complex logic, you can't use Quick form. So always go with full form syntax.
+
+```sql
+   --Task : Retrieve employee details with abbreviated country code
+   -- Sometime in reports we don't have enough spaces in order to use whole fullname of a country so we use abbreviated code for them
+   --Get distinct country name from table using distinct country 
+
+    SELECT
+        employee_id,
+        employee_name,
+        country,
+        CASE country
+           WHEN 'India' THEN 'IND' 
+           WHEN 'USA' THEN 'US'
+           WHEN 'Canada' THEN 'CA'
+           WHEN 'Japan' THEN 'JAP'
+           WHEN 'Europe' THEN 'EU'
+           ELSE 'N/A'
+        END AS country_code
+   FROM Sales.employees
+```
+
+**Use case 3. Handling NULLs**
+   - We case use ```CASE``` statement in order to handle NULLs.
+   - Handling NULLs means Replace NULLs with a specific value.
+   - Bcuz sometime NULLs can lead to inaccurate results, which can lead to wrong decision-making.
+   - How to handle NULLs using ```CASE``` statements
+
+```sql
+   --Task : Find the average score of cutomers and treat NULLs as 0.
+
+  --using window function over()
+   SELECT
+         customer_id,
+         customer_name
+         score,
+         AVG(score) over() avg_score,
+          CASE
+             WHEN score IS NULL THEN 0
+             ELSE score
+         END AS new_score,
+         AVG( CASE
+             WHEN score IS NULL THEN 0
+             ELSE score
+         END ) OVER() new_avg_score
+   FROM Sales.customers
+
+--This below one is not the right way 
+  SELECT
+         customer_id,
+         customer_name,
+         score,
+         AVG(CASE WHEN score IS NULL THEN 0 ELSE score END AS SCORE) avg_score
+   FROM Sales.customers
+   GROUP BY customer_id, customer_name, score
+```
+
+**Use case 4. Conditional Aggregation**
+   - Conditional Aggregation means we are going to apply aggregation function(SUM,COUNT,AVG,MAX,MIN) in SQL. But this time only on a subset of data that meets specific conditions.
+   - This technique is amazing in order to do deep dive analysis or target specific subset of data.
+
+```sql
+   --Task : Count how many times each customer has made an order with sales greater than 30.
+
+    SELECT
+         customer_id,
+          CASE
+              WHEN sales > 30 THEN 1
+              ELSE 0
+          END AS sales_flag
+          SUM(CASE
+              WHEN sales > 30 THEN 1
+              ELSE 0
+          END )  total_0rders_Higher30,   -- this is conditional aggregation using CASE statement
+          COUNT(*) total_orders           -- this is normal aggregation
+    FROM Sales.orders
+    GROUP BY customer_id
+```
+
+> FLAG : Binary indicator (1,0) to be summarized to show how many times the condition is true. <br/>
+> Step 1 : Create flag with binary(1,0) to mark rows that meet certain criteria.
+
+### Summary of ```CASE``` statement
+
+- ```CASE``` statement evaluates a list of conditions and returns a value when the first condtion is met.
+- Rules : The data type of each result must be matching.
+- Use Cases : Main use case is do Data Transformation, by deriving(creating) new information.
+   - **Categorize the data** 
+   - **Mapping Values** : We can use ```CASE``` statement in order to help us mapping the cryptical technical value that is stored in database  to new value which is more readable & friendly to used.
+   - **Handling NULLs** : We can use ```CASE``` statement in order to replace NULLs with a specific value to make our aggregation more accurate
+   - **Conditional Aggregations** : Where we can aggregate a subset of data that meets specific condition in order to do focused & target analysis.
+
 </details>
 <!------------------------------------------->
 
+Here, We have learned all the functions & topics in order to transform a single value in SQL in ROW-Level Functions that are very important specially for Data Engineering.
+
 
 <!-----------Chapter 7. Row-Level Functions------------------------>
+
+[< Combining Data](https://github.com/pawansinghfromindia/SQL/blob/main/06_Combining_Data/combining_data.md) | [Aggregation & Analytical Functions >]()
