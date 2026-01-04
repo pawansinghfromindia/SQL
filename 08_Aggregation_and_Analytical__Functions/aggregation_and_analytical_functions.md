@@ -984,6 +984,7 @@ If we apply any aggregate function in SQL, What SQL does is go through all rows 
 **```COUNT( )```** is exception, It allows any data type numbers, characters, dates and so on.
 - counts the number of values in a column regardless of their data type.
 
+
 Note : Counts the total number of rows, including duplicates, not the unique values.
 
 ```python
@@ -1011,17 +1012,105 @@ Note : Counts the total number of rows, including duplicates, not the unique val
    SELECT
        COUNT(*) AS TotalOrders
    FROM Sales.orders
+
+  # Find the total number of orders.
+  # Additionally provide details such as order_id & order_date.
+
+  SELECT
+       order_id,
+       order_date,
+       COUNT(*) OVER() AS TotalOrders
+   FROM Sales.orders
+
+  # Find the total number of orders for each customers
+
+  SELECT
+       customer_id,
+       order_id,
+       order_date,
+       COUNT(*) OVER() AS TotalOrders,
+       COUNT(*) OVER(PARTITION BY customer_id) AS OrdersByCustomers
+   FROM Sales.orders
+```
+| order_id | order_date | customer_id  | TotalOrders | OrdersByCustomers |
+|----------|------------|--------------|-------------|-------------------|
+| 3        | 2026-01-10 | 101          | 10          | 3                 |
+| 4        | 2026-01-20 | 101          | 10          | 3                 |
+| 7        | 2026-02-15 | 101          | 10          | 3                 |
+|__________|____________|______________|_____________|___________________|
+| 1        | 2026-01-01 | 201          | 10          | 3                 |
+| 5        | 2026-02-01 | 201          | 10          | 3                 |
+| 9        | 2026-03-10 | 201          | 10          | 3                 |
+|__________|____________|______________|_____________|___________________|
+| 10       | 2026-03-15 | 301          | 10          | 3                 |
+| 6        | 2026-02-05 | 301          | 10          | 3                 |
+| 2        | 2026-01-05 | 301          | 10          | 3                 |
+|__________|____________|______________|_____________|___________________|
+| 8        | 2026-02-18 | 401          | 10          | 1                 |
+
+```python
+   # Find total number of customers, doesn't matter whether customer is NULL inside database count all of them.
+   # Additionally provide all customers's details.
+
+   SELECT
+        customer_id,
+        customer_name,
+        COUNT(*) OVER() AS TotalCustomers
+  FROM Sales.customers
+
+   # Find total number of scores for the customers.
+
+   SELECT
+        COUNT(score) OVER() AS TotalNumOfScore
+   FROM Sales.customers
 ```
 
-**Use case of Count()** : Quick summary or snapshot of the entire dataset.
-Example : How many employees? How many orders? etc etc.
 
- 
+**Use case of Count()** : 
+- 1. Quick summary or snapshot of the entire dataset.
+ Example : How many employees? How many orders? etc etc.
+
+- 2. Total Per Groups : Group-wise analysis, to understand patterns within different categories
+
+
+
+- 3. Data Quality Check : Detecting number of NULLs by comparing to total number of rows.
+
+```python
+   SELECT
+        *,
+        COUNT(*) OVER() AS TotalCustomersStar
+        COUNT(1) OVER() AS TotalCustomersOne
+        COUNT(score) OVER() AS TotalNumOfScore
+  FROM Sales.customers
+```
+
+
+- 4. Data Quality Issue : Duplicates lead to inaccuracies in analysis. ```COUNT()``` can be used to identify deuplicates.
+
+```python
+   # Task : Check whether the table orders contains any duplicate rows
+   # To solve this 1st thing is to check & understand what is the primary key of table orders
+
+   SELECT
+        order_id,
+        COUNT(*) OVER(PARTITION BY order_id) TotalRows,  --Divides the data by order_id which is a Primary key
+        COUNT(order_id) OVER() TotalOrderID
+```
+  
+
 **```SUM()``` Window Aggregate Functions**
+
+
+
 
 **```AVG()``` Window Aggregate Functions**
 
+
+
 **```MAX()``` Window Aggregate Functions**
+
+
 
 **```MIN()``` Window Aggregate Functions**
  
