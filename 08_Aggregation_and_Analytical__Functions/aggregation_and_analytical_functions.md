@@ -1086,33 +1086,277 @@ Note : Counts the total number of rows, including duplicates, not the unique val
 ```
 
 
-- 4. Data Quality Issue : Duplicates lead to inaccuracies in analysis. ```COUNT()``` can be used to identify deuplicates.
+- 4. Data Quality Issue : Duplicates lead to inaccuracies in analysis. ```COUNT()``` can be used to identify deuplicates to improve data quality.
 
 ```python
    # Task : Check whether the table orders contains any duplicate rows
    # To solve this 1st thing is to check & understand what is the primary key of table orders
 
-   SELECT
+SELECT *
+FROM( 
+  SELECT
         order_id,
-        COUNT(*) OVER(PARTITION BY order_id) TotalRows,  --Divides the data by order_id which is a Primary key
-        COUNT(order_id) OVER() TotalOrderID
+        COUNT(*) OVER(PARTITION BY order_id) checkPK,  --Divides the data by order_id which is a Primary key
+   FROM Sales.orders
+) WHERE checkPK > 1
 ```
+**Use case of Count()** 
+1. Overall Analysis
+2. Category Analysis
+3. Quality Checks : Identify NULLs
+4. Quality Checks : Identify Duplicates
   
 
 **```SUM()``` Window Aggregate Functions**
+- Returns the sum of values within a window.
+```python
+    # Task : Find the total sales for each product
 
+    SELECT
+         product,
+         sales,
+         SUM(sales) OVER(PARTITION BY product) AS TotalSales
+    FROM Sales.orders  
+```
 
+| product | sales | TotalSales |
+|---------|-------|------------|
+| Caps    |  20   |   35       |
+| Caps    |  10   |   35       |
+| Caps    |  5    |   35       |
+|_________|_______|____________|
+| Gloves  |  30   |   100      |
+| Gloves  |  70   |   100      |
+| Gloves  | NULL  |   100      |
 
+> ```SUM()``` ignores the NULLs in calculation.
+
+> ```SUM()``` accepts only numberic data type.
+
+```python
+   # Task : Find the total sales across all orders
+   #        and the total sales for each product
+   #        Additonally provide details such as order_id and order_date.
+
+   SELECT
+       order_id,
+       order_date,
+       sales,
+       product,
+       SUM(sales) OVER() AS TotalSales
+       SUM(sales) OVER(PARTITION BY product) AS TotalSales
+   FROM Sales.order
+```
+
+### Comparision Use Case
+Compare the current value and aggregated value of window functions.
+
+| Month | Sales |
+|-------|-------|
+| Jan   | 20    |
+| Feb   | 10    |
+| Mar   | 30    | 
+| Apr   | 5     |
+| Jun   | 70    |
+| Jul   | 40    |
+
+Suppose current is currently at March and sales is 30, So we can compare this value i.e. current sales with an aggregated value for example TotalSales using ```SUM()```. So, what will happen with the current value with the totalSales is we can doing comparison analysis called **part-to-whole Analysis** where we are going to understand how important was the sales at March month compared to TotalSales. or we can compare it with best month(highest sales) or worst month(lowest sales) using ```MAX()``` or ```MIN()``` or ```AVG()``` in order to understand above the typical sale or below the average.
+This is very important analysis in order to study & understand the performance of current data.
+
+```python
+   # Task : Find the percentage contribution of each product's sales to the total sales.
+
+      SELECT
+          product,
+          order_id,
+          sales,
+          SUM(sales) OVER() TotalSales,
+          ROUND(CAST(sales AS Float)/SUM(sales) OVER() * 100, 2) AS percentageOfTotal
+     FROM Sales.order
+ 
+```
+> PART-TO-WHOLE shows the contribution of each data point to the overall dataset.
 
 **```AVG()``` Window Aggregate Functions**
+- Return the average of values within a window.
+```python
+    # Task : Find the average sales for each product
+
+    SELECT
+         product,
+         sales,
+         AVG(sales) OVER(PARTITION BY product) AS avgSales
+    FROM Sales.orders  
+```
+
+| product | sales | avgSales   |
+|---------|-------|------------|
+| Caps    |  20   |   11.66    |
+| Caps    |  10   |   11.66    |
+| Caps    |  5    |   11.66    |
+|_________|_______|____________|
+| Gloves  |  30   |   50       |
+| Gloves  |  70   |   50       |
+| Gloves  | NULL  |   50       |
+
+- Here, NULL doesn't means Zero in every business. So handle NULLs we can either use ```ISNULL()``` or ```COALESCE()``` function.
+
+```python
+    SELECT
+         product,
+         sales,
+         AVG(COALESCE(sales, 0)) OVER(PARTITION BY product) AS avgSales
+    FROM Sales.orders  
+```
+| product | sales | avgSales   |
+|---------|-------|------------|
+| Caps    |  20   |   11.66    |
+| Caps    |  10   |   11.66    |
+| Caps    |  5    |   11.66    |
+|_________|_______|____________|
+| Gloves  |  30   |   33.33    |
+| Gloves  |  70   |   33.33    |
+| Gloves  |  0    |   33.33    |
+
+```python
+   # Task : Find the average sales across all order and the average sales for each product
+   #         Additionally, provide details such as order_id, order_date
+    SELECT
+        product,
+        order_id,
+        order_date,
+        sales,
+        AVG(COALSCE(sales, 0)) OVER() AS avgSales,
+        AVG(COALSCE(sales, 0)) OVER(PARTITION BY product) AS prodAVGSales
+   FROM Sales.orders
+```
+
+```python
+    # Task : Find the average scores of customers.
+    #        Additionally, provide details such as customer_id and customer_name
+
+     SELECT
+          customer_id,
+          customer_name,
+          score,
+          AVG(COALESCE(score), 0) OVER() AS customerAVG
+    FROM Sales.customers
+```
+- COMPARE TO AVERAGE : Helps to evaluate whether a value is above or below the average.
+
+```python
+    # Task : Find all orders where sales are higher than the average sales across all orders.
+
+   SELECT *
+   FROM   (
+            SELECT
+                order_id,
+                sales,
+                AVG(sales) OVER() AS avgSales
+            FROM Sales.customers 
+           ) WHERE sales > avgSales  
+```
+
+**```MAX()```and ```MIN()``` Window Aggregate Functions**
+- They are very simple but yet very powerful in analytics.
+- ```MIN()``` return the minimum(lowest) value within a window.
+- ```MAX()``` return the maximum(highest) value within a window.
+
+```python
+   # Task : Find the highest sales for each product
+   # Task : Find the lowest sales for each product
+
+       SELECT
+           product,
+           sales,
+           MAX(sales) OVER() AS highestSales,
+           MIN(sales) OVER() AS lowestSales
+      FROM Sales.orders
+
+```
+
+| product | sales | MIN | MAX |
+|---------|-------|-----|-----|
+| Caps    |  20   |  5  | 20  |
+| Caps    |  10   |  5  | 20  |
+| Caps    |  5    |  5  | 20  |
+|_________|_______|_____|_____|
+| Gloves  |  30   | 30  | 70  |
+| Gloves  |  70   | 30  | 70  |
+| Gloves  | NULL  | 30  | 70  |
+
+> To handle NULLs we have to use ```ISNULL()``` or ```COALESCE()``` by replacing it with 0 in case of MAX but in case of MIN replace with 99999
+
+```python
+      # Task : Find the highest & lowest sales across all orders and
+      #        the highest & lowest sales for each product.
+      #        Additionally, provide details such as order_id and order_date.
+
+      SELECT
+           product,
+           order_id,
+           order_date,
+           sales,
+           MAX(sales) OVER() AS highestSales,
+           LOW(sales) OVER() AS lowestSales,
+           MAX(sales) OVER(PARTITION BY product) AS highestSalesByProduct,
+           LOW(sales) OVER(PARTITION BY product) AS lowestSalesByProduct
+     FROM Sales.orders
+```
+
+```python
+     # Task : Show the employees who have the highest salaries.
+
+    SELECT *
+    FROM ( 
+          SELECT
+              employee_id,
+              employee_name,
+              salary,
+              MAX(salary) OVER() as highestSalary
+          FROM Sales.customers
+    ) WHERE salary = highestSalary
+```
+
+Compare to Extreme : Help to evaluate how well a value is performing relative to the extremes(Highest/Lowest)
+
+Distance From Extreme 
+- The lower the deviation, the closer the data point is to extreme.
+- The higher the deviation, the distant the data point is to extreme.
+
+```python
+   # Task : Calculate the deviation of each sale from both the minimun and maximum sales amounts.
+
+     
+            SELECT
+                sales,
+                MAX(sales) OVER() AS high,
+                LOW(sales) OVER() AS low,
+                sales - MIN(sales) OVER() deviationFromMIN,
+                MAX(sales) - sales OVER() deviationFromMAX
+          FROM Sales.orders
+```
+### Analytical Use case of Aggregate Function : Running & Rolling Total
+
+- One of the most important use case of Aggregate function is doing running total & rolling total
+- These two concepts are very important for Data Analysis & Reporting that we must know.
+- The key use case of these 2 concept is to do Tracking
+
+> Tracking : Tracking current sales with Target sales in our business
+> Trend Analysis : Providing insights into historical patterns.
+
+**RUNNING & ROLLING TOTAL**
+- They aggregate sequence of members, the aggegation is updated each time a new member is added to sequence. Sequence could be like Time sequence. That's why we call this type **Analysis Over Time**
+
+**What is the difference between the RUNNING TOTAL and ROLLING TOTAL?**
+
+RUNNING TOTAL : Aggregate all values from the begining up to the current point without dropping off older data.
+
+ROLLING TOTAL : Aggregate all values within a fixed time window (e.g. Last 30 days, last 2 months).
+- As new data is added, the oldest data point will be dropped.
+- In this we will get effect of **Rolling/Shifting window**
 
 
-
-**```MAX()``` Window Aggregate Functions**
-
-
-
-**```MIN()``` Window Aggregate Functions**
  
 </details>
 <!---------------------------------------------->
