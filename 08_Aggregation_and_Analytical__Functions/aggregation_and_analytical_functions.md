@@ -315,6 +315,7 @@ Mainly we have 2 parts :
 2. **Window Rank Functions** : used for ranking data
 3. **Window Value(Analytical) Functions** : used for access specific value
 
+
 | Window <br/> Aggregate Functions  | Window <br/> Rank Functions   | Window <br/> Value (Analytical) Functions             |
 |-----------------------------------|-------------------------------|-------------------------------------------------------|
 | ```COUNT()```  -> All data types  | ```ROW_NUMBER()```   -> Empty |  ```LEAD(expr, offset, default)```  -> All data types |
@@ -496,6 +497,8 @@ Here, What this query will do is : first ```PARTITION BY``` is going to divide d
 - We call it **Window frame** or **frame clause**
 - Window Frame defines a subset of rows within each window that is relevant for the calculation.
 
+> Window Frame : Define a subset of rows in a window.
+
 Let's understand How it works? <br/>
 If we do aggregation & we don't use window function, that means we are considering entire data (rows inside table). <br/>
 What we can do is divide the data by using ```PARTITION BY``` into multiple windows, suppose we have window1 and window2. Now if we do aggregation all the window1 will be aggregates & also window2 will be also aggregated. <br/>
@@ -614,13 +617,414 @@ And this will continue until current becomes last row
 | Apr   | 5     |  135    |
 | Jun   | 70    |  135    |
 
+```python
+     SELECT
+           order_id,
+           order_date,
+           order_status,
+           sales.
+           SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date ROWS BETWEEN CURRENT ROW AND 2 FOLLOWING) totalSales
+     FROM Sales.orders
+```
+| order_id | order_date | order_status | sales | totalSales |
+|----------|------------|--------------|-------|------------|
+| 1        | 2026-01-01 | Delivered    | 10    | 55         |
+| 3        | 2026-01-10 | Delivered    | 20    | 95         |
+| 5        | 2026-02-01 | Delivered    | 25    | 105        |
+| 6        | 2026-02-05 | Delivered    | 50    | 80         |
+| 7        | 2026-02-15 | Delivered    | 30    | 30         |
+|__________|____________|______________|_______|____________|
+| 2        | 2026-01-05 | Shipped      | 15    | 165        |
+| 4        | 2026-01-20 | Shipped      | 60    | 170        |
+| 8        | 2026-02-18 | Shipped      | 90    | 170        |
+| 9        | 2026-03-10 | Shipped      | 20    | 80         |
+| 10       | 2026-03-15 | Shipped      | 60    | 60         |
+
+```python
+     SELECT
+           order_id,
+           order_date,
+           order_status,
+           sales.
+           SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) totalSales
+     FROM Sales.orders
+```
+
+### Compact Frame (Short form)
+- We can use shortcuts but we can use them only with the PRECEDING.
+- For only ```PRECEDING```, the ```CURRENT ROW``` can be skipped.
+
+|              | FRAME can be short, which can skip PRECEDING                   | valid/invalid |
+|--------------|----------------------------------------------------------------|---------------|
+| Normal Frame | ```ROWS BETWEEN CURRENT ROW AND 2 FOLLOWING```                 | ✅           |
+| Normal Frame | ```ROWS BETWEEN 2 PRECEDING AND CURRENT ROW```                 | ✅           |
+| Normal Frame | ```ROWS BETWEEN 2 PRECEDING AND 2 FOLLOWING```                 | ✅           |
+| Normal Frame | ```ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW```         | ✅           |
+| Normal Frame | ```ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING```         | ✅           |
+| Normal Frame | ```ROWS BETWEEN 3 PRECEDING AND UNBOUNDED FOLLOWING```         | ✅           |
+| Normal Frame | ```ROWS BETWEEN UNBOUNDED PRECEDING AND 2 FOLLOWING```         | ✅           |
+| Normal Frame | ```ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING``` | ✅           |
+|______________|________________________________________________________________|______________|
+| Short  Frame | ```ROWS  2 PRECEDING```                                        | ✅           |
+| Short  Frame | ```ROWS  UNBOUNDED PRECEDING```                                | ✅           |
+| Short  Frame | ```ROWS  2 FOLLOWING```                                        | ❌           |
+| Short  Frame | ```ROWS  UNBOUNDED FOLLOWING```                                | ❌           |
+
+```python
+     SELECT
+           order_id,
+           order_date,
+           order_status,
+           sales.
+           SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date ROWS 2 PRECEDING) totalSales
+     FROM Sales.orders
+```
+
+### Default Frame 
+- SQL uses Default Frame, if ```ORDER BY``` is used without Frame.
+- The default frame is ```ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW```
+
+```python
+    SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date) totalSales
+```
+Default Frame :
+```python
+    SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) totalSales
+```
+Shortcut of Default Frame :
+```python
+   SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date ROWS UNBOUNDED PRECEDING) totalSales3
+```
+
+
+```python
+     SELECT
+           order_id,
+           order_date,
+           order_status,
+           sales.
+           SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date) totalSales1
+           SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) totalSales2
+           SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date ROWS UNBOUNDED PRECEDING) totalSales3 --shortcut
+           --both totalSales1 == totalSales2 == totalSales3, bcuz of default frame, third one is shortcut of default frame.
+     FROM Sales.orders
+```
+
+> ```ORDER BY``` always uses a frame. Even if you don't define the frame, it uses default frame.
+
 </details>
 <!---------------------------------------------->
+<details>
+  <summary><b>Window Functions 4xRules : Limitations of Window Functions</b></summary>
+
+ Let's understand the Rules of Window Functions, in other words Limitations.
+
+ Here, We will learn what's we are not allowed to do while using Window functions.
+
+ **Rule 1.** : Window functions can be used only in ```SELECT``` and ```ORDER BY``` clauses.
+ ```python
+     SELECT
+           order_id,
+           order_date,
+           order_status,
+           sales.
+           SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date) totalSales
+     FROM Sales.orders
+     ORDER BY SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date) DESC
+```
+> Meaning : **Window Functions can't be used to filter data.**
+
+Not Allowed : Throw Error ❌
+```python
+     SELECT
+           order_id,
+           order_date,
+           order_status,
+           sales.
+           SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date) totalSales
+     FROM Sales.orders
+     WHERE SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date) > 100
+     GROUP BY SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date) 
+```
+> EXCEPTION : Window function can be used together with ```GROUP BY``` in the same query, only if the same columns are used.
+
+ **Rule 2.** : Nesting Window functions is not allowed.
+
+Not Allowed : Throw Error ❌
+```python
+       SELECT
+           order_id,
+           order_date,
+           order_status,
+           sales.
+           SUM(SUM(sales) OVER(PARTITION BY order_status ORDER BY order_date)) OVER(PARTITION BY order_status ORDER BY order_date) totalSales
+     FROM Sales.orders
+```
+
+**Rule 3.** : SQL execute Window functions after ```WHERE``` clause.
+
+```python
+     # Task : Find the total sales for each order_status But only for the two product 101 and 102
+
+     SELECT
+          product_id,
+          order_id,
+          order_status,
+          sales,
+          SUM(sales) OVER(PARTITION BY order_status) as totalSales
+     FROM Sales.orders
+     WHERE product_id IN(101, 102)
+```
+**Rule 4.** : Window function can be used together with ```GROUP BY``` in the same query, only if the same columns are used.
+
+```python
+    # Rank customer based on their total sales.
+    # Sounds easy but it's not!
+    # Here, 1st we have to rank customers then 2nd is aggregate it based on the totalSales by each customer.
+
+    # Here, At step1 : we don't have to show ant details  so, we can go by GROUP BY
+    SELECT
+          customer_id,
+          SUM(sales) as totalSales
+    FROM Sales.orders
+    GROUP BY customer_id
+
+    ## But We have to rank in step2, to here we're forced to use window function.
+    ## Now on top of GROUP BY, we're going to use Window function in order to rank.
+
+    SELECT
+          customer_id,
+          SUM(sales) as totalSales,
+          RANK() OVER(ORDER BY  SUM(sales) DESC) AS rankCustomerByTotalSales
+    FROM Sales.orders
+    GROUP BY customer_id
+```
+
+| customer_id | totalSales | rankCustomerByTotalSales |
+|-------------|------------|--------------------------|
+|  3          | 125        |  1                       |
+|  1          | 110        |  2                       |
+|  4          | 90         |  3                       |
+|  2          | 55         |  4                       |
+
+> SQL allows us to use Window Function together with the ```GROUP BY``` but only with the one rule, Anything which you're using inside the window function must be part of the ```GROUP BY```, in above example we're using ```SUM(sales)``` inside the Window function bcuz ```SUM(sales)``` is the part of ```GROUP BY```
+> If we remove SUM and just only use sales then it is not allowed as sales is not part of group by. It will throw error.
+
+Not Allowed : Throw Error ❌
+```python
+   SELECT
+          customer_id,
+          SUM(sales) as totalSales,
+          RANK() OVER(ORDER BY  sales DESC) AS rankCustomerByTotalSales
+    FROM Sales.orders
+    GROUP BY customer_id
+```
+
+Allowed : Rank based on customer_id ✅
+```python
+   SELECT
+          customer_id,
+          SUM(sales) as totalSales,
+          RANK() OVER(ORDER BY  customer_id DESC) AS rankCustomerByTotalSales
+    FROM Sales.orders
+    GROUP BY customer_id
+```
+> 1st step : Just build the query by ```GROUP BY``` <br/>
+> 2nd step : Define & build window function <br/>
+> This will result into nice analytical use cases in solving your problems. <br/>
+  
+</details>
+
+<details>
+  <summary><b>Summary of Window Function</b></summary>
+
+**SQL Window Function** : Performs calculations on subset of data without losing details.
+- We can do aggregation & not losing details unlike ```GROUP BY```
+
+**Window function VS ```GROUP BY```**
+- Window functions are very powerful & dynamic compare to ```GROUP BY```
+- Advanced Data Analysis using Window Functions & Simple Data Analysis using  ```GROUP BY```
+- We can use ```GROUP BY``` + Window function in same query only if same column is used.
+  - First step is do ```GROUP BY```
+  - Later use Window function in the same query.
+
+**Window Function Components**
+- Window Functions
+  - Aggregation Functions in Window
+- Window Definition using ```OVER()``` Clause
+  - If we have to Divide the data : ```PARTITION BY``` 
+  - If we have to sort the data : ```ORDER BY```
+  - If we have to define subset of data : Frame ```ROWS BETWEEN UNBOUNDED PRECEDENT AND 2 FOLLOWING```
+
+**Rules/Limitations of Window Functions**
+- We can use window function only in ```SELECT``` and ```ORDER BY``` clause. We can't use window function in ```WHERE``` clause in order to filter data
+- Nesting of Window Function is not allowed. For that we have to use multiple sub-queries.
+- SQL excecutes window functions always after filtering data using ```WHERE```
+- We can use ```GROUP BY``` + Window function in same query only if same column is used.
+  
+</details>
+
+With that, We have learned the basics about the Window functions. 
+Next we will learn about Window functions like 
+1. Window Aggregate Functions
+2. Window Ranking Functions
+3. Window Value functions
+<!----------------------------------------------->
 
 ## 8.3 Window Aggregate Function
+
+Here, We will learn How to summarize data for specific group of rows.
+
 <details>
-  <summary><b>Window Aggregate Function</b></summary>
-  
+  <summary><b>Window Aggregate Function ?</b></summary>
+
+Let's say we have data in table inside the database
+
+| Month | Sales |
+|-------|-------|
+| Jan   | 20    |
+| Feb   | 10    |
+| Mar   | 30    |
+| Apr   | 5     |
+| Jun   | 70    |
+| Jul   | 40    |
+
+If we apply any aggregate function in SQL, What SQL does is go through all rows of entire dataset or window and start aggregating the data and in the result output SQL gives one single aggregated value.
+
+| totalSales|
+|-----------|
+|  175      |
+
+**Syntax of Aggregate Functions :**
+```python
+    AVG(sales) OVER(PARTITION BY product_id ORDER BY sales)
+```
+- Except ```COUNT()``` which takes both numeric and string value as input, rest every other aggregate function ```AVG()```, ```SUM()```, ```MAX()```,```MIN()``` takes only numeric value bcuz we can't sum or average or max or min of string value.
+
+- ```PARTITION BY``` is optional
+- ```ORDER BY``` is also optional
+
+```python
+    AVG(sales) OVER()
+```
+> That means, the whole definition of Window could be empty for the aggregate function.
+
+| Window <br/> Aggregate Functions | Expression     |   Partition Clause | Order Clause | Frame Clause |
+|----------------------------------|----------------|--------------------|--------------|--------------|
+| ```COUNT()```                    | All data types |  Optional          | Optional     | Optional     |
+| ```SUM()```                      | Numeric values |  Optional          | Optional     | Optional     |
+| ```AVG()```                      | Numeric values |  Optional          | Optional     | Optional     |
+| ```MAX()```                      | Numeric values |  Optional          | Optional     | Optional     |
+| ```MIN()```                      | Numeric values |  Optional          | Optional     | Optional     |
+
+| Window <br/> Aggregate Functions | Definition                               |   Syntax                                     |
+|----------------------------------|------------------------------------------|----------------------------------------------|
+| ```COUNT()```                    | Returns the number of Rows in a window   | ```COUNT(*) OVER(PARTITION BY product )```   |
+| ```SUM()```                      | Returns the sum of values in a window    | ```SUM(sales) OVER(PARTITION BY product )``` |  
+| ```AVG()```                      | Returns the average of values in a window| ```AVG(sales) OVER(PARTITION BY product )``` |   
+| ```MAX()```                      | Returns the maximum of value in a window | ```MAX(sales) OVER(PARTITION BY product )``` |  
+| ```MIN()```                      | Returns the minimum of value in a window | ```MIN(sales) OVER(PARTITION BY product )``` |
+
+**```COUNT()``` Window Aggregate Functions**
+- Returns the number of rows within a window.
+
+```python
+    # Task : Find the total number of orders for each product
+
+    SELECT
+         product,
+         sales,
+         COUNT(*) OVER(PARTITION BY product) AS count
+    FROM Sales.orders  
+```
+
+| product | sales | count |
+|---------|-------|-------|
+| Caps    |  20   |   3   |
+| Caps    |  10   |   3   |
+| Caps    |  5    |   3   |
+|_________|_______|_______|
+| Gloves  |  30   |   3   |
+| Gloves  |  70   |   3   |
+| Gloves  | NULL  |   3   |
+
+⚠️ WARNING : Careful with NULL values while you're using Aggregate functions.
+
+> ```COUNT(*)``` counts all the rows in a table, regardless of whether any value is NULL.
+
+> Sometime people used ```COUNT(1)``` in place of ```COUNT(*)```. Don't worry both are exactly same in result & performaces.
+
+> ```COUNT(*)```==```COUNT(1)```
+
+**```COUNT(column)``` vs ```COUNT(*)```==```COUNT(1)```**
+- ```COUNT(column)``` : counts the number of non-NULL values in column. It ignore NULLs.
+- ```COUNT(*)``` : counts the number of all values in column whether it is NULL or non-NULL.
+
+```python
+    # Task : Find the total number of orders for each product, if there is null don't count it.
+    # Here, Don't count blindly, We have to count only those rows which have not null values. 
+
+    SELECT
+         product,
+         sales,
+         count(sales) OVER(PARTITION BY product) AS count
+    FROM Sales.orders  
+```
+
+| product | sales | count |
+|---------|-------|-------|
+| Caps    |  20   |   3   |
+| Caps    |  10   |   3   |
+| Caps    |  5    |   3   |
+|_________|_______|_______|
+| Gloves  |  30   |   2   |
+| Gloves  |  70   |   2   |
+| Gloves  | NULL  |   2   |
+
+**```COUNT( )```** is exception, It allows any data type numbers, characters, dates and so on.
+- counts the number of values in a column regardless of their data type.
+
+Note : Counts the total number of rows, including duplicates, not the unique values.
+
+```python
+    # Task : Find the total number of product for each product, if there is null don't count it including duplicates, not the unique values 
+
+    SELECT
+         product,
+         sales,
+         count(product) OVER(PARTITION BY product) AS count
+    FROM Sales.orders  
+```
+| product | sales | count |
+|---------|-------|-------|
+| Caps    |  20   |   3   |
+| Caps    |  10   |   3   |
+| Caps    |  5    |   3   |
+|_________|_______|_______|
+| Gloves  |  30   |   3   |
+| Gloves  |  70   |   3   |
+| Gloves  | NULL  |   3   |
+
+```python
+   # Find the total number of orders.
+
+   SELECT
+       COUNT(*) AS TotalOrders
+   FROM Sales.orders
+```
+
+**Use case of Count()** : Quick summary or snapshot of the entire dataset.
+Example : How many employees? How many orders? etc etc.
+
+ 
+**```SUM()``` Window Aggregate Functions**
+
+**```AVG()``` Window Aggregate Functions**
+
+**```MAX()``` Window Aggregate Functions**
+
+**```MIN()``` Window Aggregate Functions**
+ 
 </details>
 <!---------------------------------------------->
 
