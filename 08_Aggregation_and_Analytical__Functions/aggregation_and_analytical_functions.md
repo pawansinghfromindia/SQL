@@ -1752,7 +1752,8 @@ On the other hand Integer-based ranking is used to answers such questions like *
 | Doesn't handle Ties | Handles Ties     | Handles Ties       |
 | No Gaps in Rank     | Gaps in Rank     | No Gaps in Rank    |
 
-### Case of ```ROW_NUMBER()```
+<details> 
+ <summary> <b> Use Case of <code> ROW_NUMBER()</code></b> </summary>
 
 1. Use Case of ROW_NUMBER() : Top N Analysis
 
@@ -1820,6 +1821,47 @@ Result output :
 ```
 
 3. Use Case of ```ROW_NUMBER()``` : Generate Unique IDs
+
+> Assign Unique IDs : Help to assign unique identifier for each row to help paginating.
+
+> Paginating : The process of breaking down a large data into smaller, more managable chunks.
+> e.g. Page 1-1000, 1K-2k, by dividing the data we can improve importing/exporting data, fast retrieval for users.
+
+```python
+     # Task : Assign unique IDs to the rows of the orders Archive table.
+
+        SELECT
+              ROW_NUMBER() OVER(ORDER BY order_id, order_date) uniqueID,
+              *
+        FROM Sales.ordersArchive 
+```
+
+4. Use Case of ```ROW_NUMBER()``` : Indentify Duplicates
+
+> Identify Duplicates : Identify and remove duplicate rows to improve data quality.
+
+- Data Cleansing is essential task for each Data Engineer not only Data Analyst in order to prepare the data before doing Data Analysis.
+
+```python
+    # Task : Identify duplicate rows in the table 'ordersArchive' and return a clean result without any duplicates.
+
+    SELECT *
+    FROM ( 
+           SELECT
+                ROW_NUMBER() OVER(PARTITION BY order_id ORDER BY creationTime DESC) rank,
+                *
+           FROM Sales.ordersArchive
+    ) WHERE rank=1
+    -- If you want bad data put rank>1
+```
+</details>
+
+| Use case of ```ROW_NUMBER()```                  |
+|-------------------------------------------------|
+| 1. Top-N Analysis                               |
+| 2. Bottom-N Analysis                            |
+| 3. Assign Unique IDs                            |
+| 4. Quality Checks : Identify & Remove Duplicates|
 
 <details>
  <summary> <b> <code> CUME_DIST() </code> </b> </summary>
