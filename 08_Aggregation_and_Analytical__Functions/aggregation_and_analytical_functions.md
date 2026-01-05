@@ -894,7 +894,11 @@ If we apply any aggregate function in SQL, What SQL does is go through all rows 
 | totalSales|
 |-----------|
 |  175      |
+</details>
 
+<details>
+ <summary> <b> Syntax of Window Aggregate Functions </b> </summary>
+ 
 **Syntax of Aggregate Functions :**
 ```python
     AVG(sales) OVER(PARTITION BY product_id ORDER BY sales)
@@ -925,7 +929,10 @@ If we apply any aggregate function in SQL, What SQL does is go through all rows 
 | ```MAX()```                      | Returns the maximum of value in a window | ```MAX(sales) OVER(PARTITION BY product )``` |  
 | ```MIN()```                      | Returns the minimum of value in a window | ```MIN(sales) OVER(PARTITION BY product )``` |
 
-**```COUNT()``` Window Aggregate Functions**
+</details>
+
+<details>
+ <summary> <b> <code> COUNT() </code></b> </summary>
 - Returns the number of rows within a window.
 
 ```python
@@ -1105,9 +1112,11 @@ FROM(
 2. Category Analysis
 3. Quality Checks : Identify NULLs
 4. Quality Checks : Identify Duplicates
-  
 
-**```SUM()``` Window Aggregate Functions**
+</details>
+
+<details>
+ <summary> <b> <code> SUM() </code></b> </summary>
 - Returns the sum of values within a window.
 ```python
     # Task : Find the total sales for each product
@@ -1148,7 +1157,7 @@ FROM(
    FROM Sales.order
 ```
 
-### Comparision Use Case
+### Comparison Use Case
 Compare the current value and aggregated value of window functions.
 
 | Month | Sales |
@@ -1177,7 +1186,11 @@ This is very important analysis in order to study & understand the performance o
 ```
 > PART-TO-WHOLE shows the contribution of each data point to the overall dataset.
 
-**```AVG()``` Window Aggregate Functions**
+</details>
+
+<details>
+ <summary> <b> <code> AVG() </code></b> </summary>
+ 
 - Return the average of values within a window.
 ```python
     # Task : Find the average sales for each product
@@ -1256,8 +1269,11 @@ This is very important analysis in order to study & understand the performance o
             FROM Sales.customers 
            ) WHERE sales > avgSales  
 ```
+</details>
 
-**```MAX()```and ```MIN()``` Window Aggregate Functions**
+<details>
+ <summary> <b> <code> MAX() </code> and <code> MIN() </code> </b> </summary>
+
 - They are very simple but yet very powerful in analytics.
 - ```MIN()``` return the minimum(lowest) value within a window.
 - ```MAX()``` return the maximum(highest) value within a window.
@@ -1336,6 +1352,11 @@ Distance From Extreme
                 MAX(sales) - sales OVER() deviationFromMAX
           FROM Sales.orders
 ```
+</details>
+
+<details>
+ <summary> <b> Running Total & Rolling Total and Moving Averages </b> </summary>
+
 ### Analytical Use case of Aggregate Function : Running & Rolling Total
 
 - One of the most important use case of Aggregate function is doing running total & rolling total
@@ -1356,16 +1377,471 @@ ROLLING TOTAL : Aggregate all values within a fixed time window (e.g. Last 30 da
 - As new data is added, the oldest data point will be dropped.
 - In this we will get effect of **Rolling/Shifting window**
 
+RUNNING TOTAL
+```python
+    # Find the running total of sale for each month.
+
+    SUM(sales) OVER( ORDER BY Month)
+    # Default Window Frame : ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+```
+| Month | Sales | SUM |
+|-------|-------|-----|
+| Jan   | 20    | 20  |
+| Feb   | 10    | 30  |
+| Mar   | 30    | 60  |
+| Apr   | 5     | 65  |
+| Jun   | 70    | 135 |
+| Jul   | 40    | 175 |
+
+ROLLING TOTAL
+```python
+     # Find the 3 months rolling total of sale for each month.
+ 
+    SUM(sales) OVER( ORDER BY Month ROWS BETWEEN 2 PRECEDING AND CURRENT ROW)
+```
+| Month | Sales | SUM |
+|-------|-------|-----|
+| Jan   | 20    | 20  |
+| Feb   | 10    | 30  |
+| Mar   | 30    | 60  |
+| Apr   | 5     | 45  |
+| Jun   | 70    | 105 |
+| Jul   | 40    | 115 |
+
+So, We can see here, Window functions are very powerful for Data Analytics.
 
  
+### Analytical Use case of Aggregate Function : Moving Average
+
+```python
+   # Calculate the moving average of sales for each product over time.
+
+      SELECT
+           product,
+           order_id,
+           order_date,
+           sales,
+           AVG(sales) OVER( PARTITION BY product) AS avgByProduct,
+           AVG(sales) OVER( PARTITION BY product ORDER BY order_date) AS movingAVG
+           --Default Frame : ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+      FROM Sales.order
+```
+> Over time analysis means sorting dates in ascending order.
+
+```python
+    # Task : Calculate the moving average of sales for each product over time, including only the next order.
+
+        SELECT
+             product,
+             order_id,
+             order_date,
+             sales,
+             AVG(sales) OVER(PARITION BY product) avgSalesByProd,
+             AVG(sales) OVER(PARITION BY product ORDER BY order_date ROWS BETWEEN CURRENT ROW AND 1 FOLLOWING) movingAvgSalesByProd
+       FROM Sales.orders     
+```
+</details>
+
+<details>
+ <summary> <b>  Summary of Window Aggregate Functions </b> </summary>
+
+**Window Aggregate Functions**
+- Aggregate set of values and return a single aggregated value
+- Here, we don't lose details unlike GROUP BY
+
+**Rules**
+- Expression of Aggregate function
+  - Numbers (All Functions ```COUNT()```,```SUM()```,```AVG()```,```MAX()```,```MIN()```)
+  - Any Data type (```COUNT()```)
+- All clauses like ```PARTITION BY```, ```ORDER BY``` or Window Frame are optional inside ```OVER()```
+
+**Use Cases**
+
+-  Overall Total Analysis: Overview of entire data  ```SUM(sales) OVER()```
+
+- Total Per Groups Analysis : Compare categories    ```SUM(sales) OVER(PARTITION BY product)```
+
+- Comparison Analysis
+   - Average
+   - Extreme : Highest/Lowest
+
+- Part=to-whole Analysis : Running Total |  Rolling Total
+  - Running Total Analysis : Progress over time ```SUM(sales) OVER(PARTITION BY product ORDER BY month ROWS BEWTEEN UNBOUNDED PRECEDENT AND CURRENT ROW)```
+  - Rolling Total Analysis : Progress over time in specific fixed window ```SUM(sales) OVER(PARTITION BY product ORDER BY month ROWS BEWTEEN  2 PRECEDENT AND CURRENT ROW)```
+  - Moving Average
+  
+- Identify Data Quality Issue by checking Duplicates using Window aggregate function ```COUNT()``` 
+
+- Outlier Detection : Finding out the data points above average, below average  & so on.
+
+> This is amazing how Window Aggregate functions ```ORDER BY```, ```PARTITION BY``` and window frames open door for advanced data analysis.
+
 </details>
 <!---------------------------------------------->
 
 ## 8.4 Window Ranking Function
+Here, We will learn how to rank data using window functions?
+
 <details>
   <summary><b>Window Ranking Function</b></summary>
-  
+
+What are Window Ranking Functions?
+
+Let's say we have data in a table inside database, We want to rank them.
+
+| Products | Sales |
+|----------|-------|
+| A        | 20    |
+| B        | 30    |
+| C        | 10    |
+| D        |  5    |
+| E        | 70    |
+
+```python
+   # Task : Rank the products based on their sales
+
+```
+
+In the process of ranking, first step SQL does is sort the data before doing anything.
+We have 2 methods in order to rank our data :
+1. Integer-based Ranking : Here, SQL assign an integer for each row based on the position of row
+- Here, we have distinct integer values.
+
+2. Percentage-based Ranking : Here, SQL assign a percentage to each row compare to all others & then assign a percentage for each row.
+- Here, we have values on scale from 0 to 1, between 0 & 1, we have infinite number of data points, this called a normalize scale or continuous value.
+
+| Products | Sales | Int-based Ranking | Per-based Ranking |
+|----------|-------|-------------------|-------------------|
+| E        | 70    |    1              |   0               |
+| B        | 30    |    2              |   0.25            |
+| A        | 20    |    3              |   0.50            |
+| C        | 10    |    4              |   0.75            |
+| D        |  5    |    5              |   1               |
+
+
+Now the Question is when to use which one? 
+
+On one hand, Percentage-based ranking is used to answer such questions like **Find the Top 20% products based on their sales**
+- This method is used to understand the contribution of data value to the oevrall Total.
+- This type of analysis is called as ***Distributed Analysis***.
+
+On the other hand Integer-based ranking is used to answers such questions like **Find the Top 3 products**
+- This method is not interested about the contribution of each product to the overall total, here we're just interested in the position of value within a list.
+- This is also very commonly used analysis or reporting, we call it ***Top/Bottom N Analysis***
+ 
+|  Window Ranking Functions     |    2 Methods of Ranking              | 
+|-------------------------------|--------------------------------------|
+| Integer-based Ranking         | Percenatge-based Ranking             |
+| It is Top/Bottom N Analyis    | It is Distribution Analysis          |
+| Find Top N products           | Find Top N% Products                 |
+| Here, rank in Discrete Values | Here, rank in Continuous values (0,1)|
+| ```ROW_NUMBER()```            |  ```CUME_DIST()```                   |
+| ```RANK()```                  |  ```PERCENT_RANK()```                |
+| ```DENSE_RANK()```            |                                      |
+| ```NTILE()```                 |                                      |
+
 </details>
+
+<details>
+    <summary> <b>Syntax of Window Ranking Functions</b> </summary>
+
+```python
+    RANK() OVER(PARTITION BY product_id ORDER BY sales)
+```
+- ```RANK()``` function doesn't takes any argument. So, It must be empty.
+- ```PARTITION BY``` is optional.
+- ```ORDER BY``` is required. So, It must be there bcuz without sorting how can we rank something.
+- Window frame is not allowed in ranking functions.
+
+| Window <br/> Ranking Functions | Expression | Partition Clause | Order Clause | Frame Clause |
+|--------------------------------|------------|------------ -----|--------------|--------------|
+| ```ROW_NUMBER()```             | Empty      |  Optional        | Required     | Not Allowed  |
+| ```RANK()```                   | Empty      |  Optional        | Required     | Not Allowed  |
+| ```DENSE_RANK()```             | Empty      |  Optional        | Required     | Not Allowed  |
+|  ```CUME_DIST()```             | Empty      |  Optional        | Required     | Not Allowed  |
+| ```PERCENT_RANK()```           | Empty      |  Optional        | Required     | Not Allowed  |
+| ```NTILE(n)```                 | Number     |  Optional        | Required     | Not Allowed  |
+
+| Window <br/> Ranking Functions | Definition                                                               | Syntax                                   |
+|--------------------------------|--------------------------------------------------------------------------|------------------------------------------|
+| ```ROW_NUMBER()```             | Assign a unique number to each in a window                               | ```ROW_NUMBER() OVER(ORDER BY sales)```  |
+| ```RANK()```                   | Assign a rank to each row in a window, with gaps                         | ```RANK() OVER(ORDER BY sales)```        |
+| ```DENSE_RANK()```             | Assign a rank to each row in a window, without gaps                      | ```DENSE_RANK() OVER(ORDER BY sales)```  |
+| ```CUME_DIST()```              | Calculates the cumulative distribution of a value within a set of values | ```CUME_DIST() OVER(ORDER BY sales)```   |
+| ```PERCENT_RANK()```           | Returns the percentile ranking numbers of a row                          | ```PERCENT_RANK() OVER(ORDER BY sales)```|
+| ```NTILE(n)```                 | Divides the rows into a specified number of approximately equal groups   | ```NTILE(n) OVER(ORDER BY sales)```      |
+
+</details>
+
+<details>
+ <summary> <b> <code> ROW_NUMBER() </code> </b> </summary>
+ 
+- Assign a unique number to each in a window, without gaps/skipping.
+- It doesn't handles ties. Meaning, If you have 2 Rows sharing the same value, they will not share same rank.  
+- In the output, you will see unique ranking without gaps/skipping.
+- Example Rank will always be like ```1,2,3,4,5``` unique even if the rows share same value. meaning Doesn't handles ties
+
+| Sales |
+|-------|
+| 80    |
+| 20    |
+| 80    |
+| 50    |
+| 100   |
+ 
+```python
+         ROW_NUMBER() OVER(ORDER BY sales)
+```  
+
+| Sales | Rank |
+|-------|------|
+| 100   |  1   |
+| 80    |  2   |
+| 80    |  3   |
+| 50    |  4   |
+| 20    |  5   |
+
+```python
+   # Rank the orders based on the their sales from highest to lowest.
+
+   SELECT
+        order_id,
+        product_id,
+        sales,
+        ROW_NUMBER() OVER(ORDER BY sales DESC) SalesRankRow
+   FROM Sales.orders
+```
+| Order_id | product_id | Sales | SalesRankRow |
+|----------|------------|-------|--------------|
+| 8        | 101        | 90    |   1          |
+| 4        | 105        | 60    |   2          |
+| 10       | 102        | 60    |   3          |
+| 6        | 104        | 50    |   4          |
+| 7        | 102        | 30    |   5          |
+| 5        | 104        | 25    |   6          |
+| 9        | 101        | 20    |   7          |
+| 3        | 101        | 20    |   8          |
+| 2        | 102        | 15    |   9          |
+| 1        | 101        | 10    |   10         |
+ 
+</details>
+
+
+
+<details>
+ <summary> <b> <code> RANK() </code> </b> </summary>
+
+- Assign a rank to each row in a window.
+- It handles ties, Meaning If 2 rows will have same data, sharing same values. then both will share same rank.
+- It leaves gaps in ranking, once you have tie.                   
+- Rank is not unique, Sharing Ranking, leaving with gaps(skipping)
+
+- Like in Olympics, if 2 athelites tie for a Gold Medal(1st place) then there will be no Silver Medal(2nd Place). Next Medal i.e Bronze (3rd Place) will be given to 3rd place.
+
+```python
+         RANK() OVER(ORDER BY sales)
+```       
+| Sales | Rank |
+|-------|------|
+| 100   |  1   |
+| 80    |  2   |
+| 80    |  2   |
+| 50    |  4   |
+| 20    |  5   |
+
+```python
+   # Rank the orders based on their sales from highest to lowest
+
+    SELECT
+         order_id,
+         product_id,
+         sales,
+         RANK() OVER( ORDER BY sales DESC) AS SalesRank
+    FROM Sales.orders
+```
+| Order_id | product_id | Sales | SalesRank    |
+|----------|------------|-------|--------------|
+| 8        | 101        | 90    |   1          |
+| 4        | 105        | 60    |   2          |
+| 10       | 102        | 60    |   3          |
+| 6        | 104        | 50    |   3          |
+| 7        | 102        | 30    |   5          |
+| 5        | 104        | 25    |   6          |
+| 9        | 101        | 20    |   7          |
+| 3        | 101        | 20    |   7          |
+| 2        | 102        | 15    |   9          |
+| 1        | 101        | 10    |   10         |
+ 
+</details>
+
+<details>
+ <summary> <b> <code> DENSE_RANK() </code> </b> </summary>
+
+ - Assign a rank to each row in a window.
+ - It handles ties.
+ - It is very similar to ```RANK()``` but why do we need it? bcuz It doesn't leaves gaps in ranking.
+ - Shared Ranking + Leaving no gaps(skipping)
+ 
+ ```python
+         DENSE_RANK() OVER(ORDER BY sales)
+```
+| Sales | Rank |
+|-------|------|
+| 100   |  1   |
+| 80    |  2   |
+| 80    |  2   |
+| 50    |  3   |
+| 20    |  4   |
+
+```python
+   # Task : Rank the orders based on their sales from Highest to Lowest
+
+   SELECT
+        order_id,
+        product_id,
+        sales,
+        DENSE_RANK() OVER(ORDER BY sales DESC) AS salesDenseRank
+   FROM Sales.orders
+```
+| Order_id | product_id | Sales |salesDenseRank|
+|----------|------------|-------|--------------|
+| 8        | 101        | 90    |   1          |
+| 4        | 105        | 60    |   2          |
+| 10       | 102        | 60    |   3          |
+| 6        | 104        | 50    |   3          |
+| 7        | 102        | 30    |   4          |
+| 5        | 104        | 25    |   5          |
+| 9        | 101        | 20    |   6          |
+| 3        | 101        | 20    |   6          |
+| 2        | 102        | 15    |   7          |
+| 1        | 101        | 10    |   8          |
+
+
+```python
+   # Task : Rank the orders based on their sales from Highest to Lowest
+
+   SELECT
+        order_id,
+        product_id,
+        sales,
+        ROW_NUMBER() OVER( ORDER BY sales DESC) AS SalesRank_Row
+        RANK() OVER( ORDER BY sales DESC) AS SalesRank_Rank
+        DENSE_RANK() OVER(ORDER BY sales DESC) AS salesRank_Dense
+   FROM Sales.orders
+```
+| Order_id | product_id | Sales | RowNumRank   | Rank | Rank_Dense |
+|----------|------------|-------|--------------|------|------------|
+| 8        | 101        | 90    |   1          | 1    |  1         | 
+| 4        | 105        | 60    |   2          | 2    |  2         |
+| 10       | 102        | 60    |   3          | 2    |  2         |
+| 6        | 104        | 50    |   4          | 4    |  3         |
+| 7        | 102        | 30    |   5          | 5    |  4         |
+| 5        | 104        | 25    |   6          | 6    |  5         |
+| 9        | 101        | 20    |   7          | 7    |  6         |
+| 3        | 101        | 20    |   8          | 7    |  6         |
+| 2        | 102        | 15    |   9          | 9    |  7         |
+| 1        | 101        | 10    |   10         | 10   |  8         |
+
+</details>
+
+### Integer-based Ranking Comparison
+
+| ```ROW_NUMBER()```  | ```RANK()```     |  ```DENSE_RANK()```| 
+|---------------------|------------------|--------------------|
+| Unique rank         | Shared Rank      | Shared Rank        |
+| Doesn't handle Ties | Handles Ties     | Handles Ties       |
+| No Gaps in Rank     | Gaps in Rank     | No Gaps in Rank    |
+
+### Case of ```ROW_NUMBER()```
+
+1. Use Case of ROW_NUMBER() : Top N Analysis
+
+> Top-N Analysis : Analyse the top performers to do targeted marketing.
+
+```python
+     # Task : Find the top highest sales for each product
+
+     SELECT *
+     FROM (
+           SELECT
+                order_id,
+                product_id,
+                sales,
+                ROW_NUMBER(PARTITION BY product_id) OVER(ORDER BY sales) AS rankByProductSales
+          FROM Sales.orders
+     ) WHERE rankByProductSales = 1
+```
+| Order_id | product_id | Sales | RowNumRank   | 
+|----------|------------|-------|--------------|
+| 8        | 101        | 90    |   1          | 
+| 9        | 101        | 20    |   2          |
+| 3        | 101        | 20    |   3          |
+| 1        | 101        | 10    |   4          |
+|__________|____________|_______|______________|
+| 10       | 102        | 60    |   1          | 
+| 7        | 102        | 30    |   2          |
+| 2        | 102        | 15    |   3          |
+|__________|____________|_______|______________|
+| 5        | 104        | 25    |   1          |
+| 6        | 104        | 50    |   2          | 
+|__________|____________|_______|______________|
+| 4        | 105        | 60    |   1          | 
+
+Result output :
+
+| Order_id | product_id | Sales | RowNumRank   | 
+|----------|------------|-------|--------------|
+| 8        | 101        | 90    |   1          | 
+| 10       | 102        | 60    |   1          | 
+| 5        | 104        | 25    |   1          |
+| 4        | 105        | 60    |   1          | 
+
+2. Use Case of ```ROW_NUMBER()``` : Bottom-N Analysis
+
+> Bottom-N Analysis : Helps in analyse the underperfmance to manage risks and to do optimizations.
+
+```python
+     # Task : Find the lowest 2 customers based on their total sales
+
+     # Step1 : Total sales for each customers, easy by using GROUP BY
+     # Step2 : Lowest 2 customer, so we can use window rank function to rank them, Don't need to partition by customers.
+
+     SELECT *
+     FROM (
+           SELECT
+                customer_id,
+                SUM(sales) totalSales,
+                ROW_NUMBER() OVER( ORDER BY SUM(sales) ASC) as customerRank
+          FROM Sales.orders
+          GROUP BY customer_id
+     ) WHERE customerRank <= 2
+
+    # Note : Columns used in GROUP BY and Window function must be same.
+```
+
+3. Use Case of ```ROW_NUMBER()``` : Generate Unique IDs
+
+<details>
+ <summary> <b> <code> CUME_DIST() </code> </b> </summary>
+
+- Calculates the cumulative distribution of a value within a set of values
+-  ```CUME_DIST() OVER(ORDER BY sales)```   
+</details>
+
+<details>
+ <summary> <b> <code> PERCENT_RANK() </code> </b> </summary>
+- Returns the percentile ranking numbers of a row 
+ ```PERCENT_RANK() OVER(ORDER BY sales)```
+ 
+</details>
+
+<details>
+ <summary> <b> <code> NTILE(n)</code> </b> </summary>
+- Divides the rows into a specified number of approximately equal groups   
+ ```NTILE(n) OVER(ORDER BY sales)```      |
+ 
+</details>
+
 <!----------------------------------------------->
 
 ## 8.5 Window Value Function
