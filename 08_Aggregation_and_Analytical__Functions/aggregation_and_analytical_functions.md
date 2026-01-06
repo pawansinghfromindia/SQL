@@ -1512,10 +1512,10 @@ We have 2 methods in order to rank our data :
 
 | Products | Sales | Int-based Ranking | Per-based Ranking |
 |----------|-------|-------------------|-------------------|
-| E        | 70    |    1              |   0               |
-| B        | 30    |    2              |   0.25            |
-| A        | 20    |    3              |   0.50            |
-| C        | 10    |    4              |   0.75            |
+| E        | 70    |    1              |   0.2             |
+| B        | 30    |    2              |   0.4             |
+| A        | 20    |    3              |   0.6             |
+| C        | 10    |    4              |   0.8             |
 | D        |  5    |    5              |   1               |
 
 
@@ -1572,6 +1572,8 @@ On the other hand Integer-based ranking is used to answers such questions like *
 | ```NTILE(n)```                 | Divides the rows into a specified number of approximately equal groups   | ```NTILE(n) OVER(ORDER BY sales)```      |
 
 </details>
+
+**Integer-based Ranking** : ```ROW_NUMBER()```,```RANK()```,```DENSE_RANK()```,```NTILE(n)```
 
 <details>
  <summary> <b> <code> ROW_NUMBER() </code> </b> </summary>
@@ -1742,9 +1744,8 @@ On the other hand Integer-based ranking is used to answers such questions like *
 | 2        | 102        | 15    |   9          | 9    |  7         |
 | 1        | 101        | 10    |   10         | 10   |  8         |
 
-</details>
 
-### Integer-based Ranking Comparison
+ **Integer-based Ranking Comparison**
 
 | ```ROW_NUMBER()```  | ```RANK()```     |  ```DENSE_RANK()```| 
 |---------------------|------------------|--------------------|
@@ -1752,8 +1753,20 @@ On the other hand Integer-based ranking is used to answers such questions like *
 | Doesn't handle Ties | Handles Ties     | Handles Ties       |
 | No Gaps in Rank     | Gaps in Rank     | No Gaps in Rank    |
 
+
+</details>
+
+
 <details> 
  <summary> <b> Use Case of <code> ROW_NUMBER()</code></b> </summary>
+
+| Use case of ```ROW_NUMBER()```                  |
+|-------------------------------------------------|
+| 1. Top-N Analysis                               |
+| 2. Bottom-N Analysis                            |
+| 3. Assign Unique IDs                            |
+| 4. Quality Checks : Identify & Remove Duplicates|
+
 
 1. Use Case of ROW_NUMBER() : Top N Analysis
 
@@ -1848,7 +1861,7 @@ Result output :
     SELECT *
     FROM ( 
            SELECT
-                ROW_NUMBER() OVER(PARTITION BY order_id ORDER BY creationTime DESC) rank,
+                ROW_NUMBER() OVER(PARTITION BY order_id ORDER BY creation_time DESC) rank,
                 *
            FROM Sales.ordersArchive
     ) WHERE rank=1
@@ -1856,41 +1869,501 @@ Result output :
 ```
 </details>
 
-| Use case of ```ROW_NUMBER()```                  |
-|-------------------------------------------------|
-| 1. Top-N Analysis                               |
-| 2. Bottom-N Analysis                            |
-| 3. Assign Unique IDs                            |
-| 4. Quality Checks : Identify & Remove Duplicates|
+<details>
+ <summary> <b> <code> NTILE(n)</code> </b> </summary>
+- Divides the rows into a specified number of approximately equal groups(buckets)   
+ 
+```python
+        NTILE(n) OVER(ORDER BY sales)
+
+        NTILE(2) OVER(ORDER BY sales DESC)
+```
+- ```Bucket Size = Num of Rows / Number of Buckets``` So, n=2, means Num of buckets = 2 and Number of Rows=4 Therefore Bucket size -> 4/2 = 2
+
+| Sales | NTILE|
+|-------|------|
+| 100   |  1   |
+| 80    |  1   |
+| 80    |  2   |
+| 50    |  2   |
+
+What if bucket size is odd, like 
+- ```Bucket Size = Num of Rows / Number of Buckets``` So, n=2, means Num of buckets = 2 and Number of Rows=5 Therefore Bucket size -> 5/2 = 2.5 -> 3
+
+> SQL Rule : Larger Group Come first, So first Bucket will contain 3 rows & Second bucket will contain 2 rows.   
+
+| Sales | NTILE|
+|-------|------|
+| 100   |  1   |
+| 80    |  1   |
+| 80    |  1   |
+| 50    |  2   |
+| 30    |  2   |
+
+> That's why called as Almost(approximately) equal groups/buckets.
+
+| order_id | sales|
+|----------|------|
+| 1        | 10   |
+| 2        | 15   |
+| 3        | 20   |
+| 4        | 60   |
+| 5        | 25   |
+| 6        | 50   |
+| 7        | 30   |
+| 8        | 90   |
+| 9        | 20   |
+| 10       | 60   |
+
+```python
+        SELECT
+            order_id,
+            sales,
+            NTILE(1) OVER(ORDER BY sales DESC) oneBucket,
+            NTILE(2) OVER(ORDER BY sales DESC) twoBucket,
+            NTILE(3) OVER(ORDER BY sales DESC) threeBucket
+            NTILE(4) OVER(ORDER BY sales DESC) fourBucket
+        FROM Sales.orders
+```
+- First SQL will sort the data, then calculate the buckets which will be 10/1 = 10 & rank them in one bucket.
+|  Bucket  | Size | 10/1 = 10 | 10/2 = 5  | 10/3=3.33 ~4| 10/4=2.25 ~3|  
+| order_id | sales| oneBucket | twoBucket | threeBucket | fourBucket  |
+|----------|------|-----------|-----------|-------------|-------------|
+| 8        | 90   | 1         | 1         | 1           |  1          |     
+| 4        | 60   | 1         | 1         | 1           |  1          |
+| 10       | 60   | 1         | 1         | 1           |  1          |
+| 6        | 50   | 1         | 1         | 1           |  2          |
+| 7        | 30   | 1         | 1         | 2           |  2          |
+| 5        | 25   | 1         | 2         | 2           |  2          |
+| 3        | 20   | 1         | 2         | 2           |  3          |
+| 9        | 20   | 1         | 2         | 3           |  3          |
+| 2        | 15   | 1         | 2         | 3           |  4          |
+| 1        | 10   | 1         | 2         | 3           |  4          |
+
+> As we have seen, if bucket size will be approx like 10/3 = 3.33 ~ 3 then larger group comes first like 4, 3, 3 kind of.
+
+**Why dow we need bucket? What is the use case of ```NTILE(n)```?**
+
+</details>
+
+<details> 
+ <summary> <b> Use Case of <code> NTILE(n)</code></b> </summary>
+
+There is 2 use cases of ```NTILE(n)``` function in data projects.
+
+One hand, A Data Analyst uses ```NTILE(n)``` function in order to segment data.<br/>
+On the other hand, A Data Engineer uses ```NTILE(n)``` function in order to do ETL process (Equalizing Load Process) and Load Balancing.
+
+1. Use Case of ```NTILE(n)``` : Data Segmentation
+- Segmentation is a very nice way to understand data. So we can segment our data into different buckets or groups.
+
+For Example : Doing segamentation for the customers. So, here we can group customers depends on their behaviour like total sales, total orders & based on that we can make VIP section, Medium & low.
+
+> Divides a dataset into distinct subsets based on certain criteria.
+
+```python
+   # Task : Segment all orders into 3 categories : high, medium & low sales
+
+   SELECT *,
+   CASE WHEN bucket = 1 THEN 'High'
+        WHEN bucket = 2 THEN 'Medium'
+        ELSE 'Low'
+   END AS salesSegmentation
+   FROM (
+        SELECT
+          order_id,
+          sales,
+          NTILE(3) OVER(ORDER BY sales DESC) as bucket
+       FROM Sales.orders
+   )
+```
+ 
+| order_id | sales| oneBucket |
+|----------|------|-----------|
+| 8        | 90   | 1         |     
+| 4        | 60   | 1         |
+| 10       | 60   | 1         |
+| 6        | 50   | 1         |
+| 7        | 30   | 2         |
+| 5        | 25   | 2         |
+| 3        | 20   | 2         |
+| 9        | 20   | 3         |
+| 2        | 15   | 3         |
+| 1        | 10   | 3         |          
+
+2. Use Case of ```NTILE(n)``` : Equalizizng Load
+- As a Data Engineer, we can use ```NTILE(n)``` function in order to do load balancing in ETL(Extract, Transform, Load).
+In a scenario, we have 2 databases, And we want to move 1 big table from Database A to Database B.
+So, In this case we're doing something called full load Means Loading all the table rows from one database to another database.
+If we are doing it in one go, It will take long time like hours or may be you get newtwrok error bcuz we have stressed the network between databases.
+So, we might lose the data & have to start again.
+
+To handle this, what we can do instead of loading all rows at a time. We can split all rows into fractions(packets).
+Like one big table into 4 small small table using ```NTILE(n)``` function.
+Now we can move those smaller tables one after another from one database to another database without stressing the network. It will increase the chances of loading the table in time.
+Once all those smaller tables successfully loaded into target database. 
+Now, Of course we can merge them into one single table using ```UNION``` of all those tables.
+
+```python
+   # Task : In order to export the data, divide the orders into 2 groups
+
+    SELECT 
+         NTILE(2) OVER(ORDER BY order_id) AS bucket,
+         *
+    FROM Sales.order
+```
+</details>
+
+<details>
+ <summary> Recap of Percentage-based Ranking </summary>
+
+ **Percentage-based Ranking** : ```PERCENT_RANK()``` ,```CUME_DIST()``` 
+
+In percetange-based ranking, SQL calculates a relative position as a percentage and assign it for each row.
+So, Rank will be continuos value from scale of 0 to 1. <br/>
+This is amazing in order to do distribution analysis. <br/>
+Calculation is focus on overall total(whole size of dataset) which helps us to find out the contribution of each value to the overall total. <br/>
+In SQL, in order to generate percenatge we have 2 different formulas :
+1. CUME_DIST = Position of Num / Number of Rows
+2. PERCENT_RANK = Position Num - 1 / Number of Rows - 1 
+
+</details>
 
 <details>
  <summary> <b> <code> CUME_DIST() </code> </b> </summary>
 
+- Cumulatative Distribution calculates the distribution of data points within a window. 
 - Calculates the cumulative distribution of a value within a set of values
--  ```CUME_DIST() OVER(ORDER BY sales)```   
+- ```CUME_DIST = Position of Num / Number of Rows```
+
+```python
+         CUME_DIST() OVER(ORDER BY sales DESC)
+```
+| Sales | CUME_DIST |
+|-------|-----------|
+| 100   |  1/5 ~ 0.2|
+| 80    |  3/5 ~ 0.6|
+| 80    |  3/5 ~ 0.6|
+| 50    |  4/5 ~ 0.8|
+| 30    |  5/5 ~ 1  |
+
+> **Tie Rule** : The position of the last occurance of the same value in case of ```CUME_DIST()```.
+  
 </details>
 
 <details>
  <summary> <b> <code> PERCENT_RANK() </code> </b> </summary>
+
+- calculates the relative position of each row within a window.
 - Returns the percentile ranking numbers of a row 
- ```PERCENT_RANK() OVER(ORDER BY sales)```
+- ```PERCENT_RANK = Position Num - 1 / Number of Rows - 1 ```
+ 
+ ```python
+       PERCENT_RANK() OVER(ORDER BY sales DESC)
+```
+| Sales | PERCENT_RANK   |
+|-------|----------------|
+| 100   |  1-1/5-1 = 0   |
+| 80    |  2-1/5-1 = 0.25|
+| 80    |  3-1/5-1 = 0.50|
+| 50    |  4-1/5-1 = 0.75|
+| 30    |  5-1/5-1 = 1   |
+
+> **Tie Rule** : The position of the first occurence of the same value in case of ```PERCENT_RANK()```
  
 </details>
 
-<details>
- <summary> <b> <code> NTILE(n)</code> </b> </summary>
-- Divides the rows into a specified number of approximately equal groups   
- ```NTILE(n) OVER(ORDER BY sales)```      |
- 
+<details> 
+    <summary> <b> Use cases of <code>CUME_DIST()</code> and <code>PERCENT_RANK()</code> </b></summary>
+
+Use case of ```CUME_DIST()```  and ```PERCENT_RANK()``` 
+
+If you want to focus on the distribution of your data points go with ```CUME_DIST()``` but if you want to focus on relative position of each row then go with ```PERCENT_RANK()``` 
+
+| ```CUME_DIST()```                         | ```PERCENT_RANK()``` |
+|-------------------------------------------|-----------------------------------------------------|
+| CUME_DIST = Position Num / Number of Rows | PERCENT_RANK = Position Num - 1 / Number of Rows -1 |
+| Inclusive (The current row is included)   | Exclusive (The current row is excluded)             |
+| Tie Rule : The position of last occurence | Tie Rule : The position of first occurence          |
+| focus on the distribution of your data points | focus on relative position of each row          |
+
+```python
+   # Task : Find the product that fall within the highest 40% of prices.
+
+      SELECT
+           *,
+           CONCAT(distRank * 100, '%') AS DistRankPercentage
+      FROM (
+            SELECT
+                product_id,
+                prices,
+                CUME_DIST() OVER(ORDER BY price DESC) distRank
+            FROM Sales.products
+      ) WHER distRank <= 0.4
+
+
+    # OR
+     SELECT
+           *,
+           CONCAT(distRank * 100, '%') AS DistRankPercentage
+      FROM (
+            SELECT
+                product_id,
+                prices,
+                PERCENT_RANK() OVER(ORDER BY price DESC) distRank
+            FROM Sales.products
+      ) WHER distRank <= 0.4
+```
 </details>
+<details>
+  <summary><b> Summary of Window Rank Functions</b></summary>
+
+**Window Rank Functions**
+- Assign a Rank for each row within a window.
+
+- 2 Types of Ranking
+  - Integer-based Ranking : Assign a number an integer for a row : ```ROW_NUMBER()```,```RANK()```,```DENSE_RANK()```,```NTILE(n)```
+  - Percentage-based Ranking : Calculate a rank & assign it for each row : ```CUME_DIST()```, ```PERCENT_RANK()```
+
+- Rules of Ranking Functions:
+  - Expression -> Empty means No arguments pass in the function
+  - ```ORDER BY``` -> To sort data in ascending or descending
+  - ```PARTITION BY``` -> To divide the data
+  - Window Frame is Not Allowed
+
+- Use Cases of Ranking Functions
+  - Top-N Analysis
+  - Bottom-N Analysis
+  - Identify & Remove Duplicates
+  - Assign Unique IDs & Pagination
+  - Data Segmentation
+  - Data Distribution Analysis
+  - Equalizing Load Processing of ETL
+</details>
+ Next we will learn about Window Value Functions, how to access another records.
 
 <!----------------------------------------------->
 
-## 8.5 Window Value Function
+## 8.5 Window Value Functions
 <details>
   <summary><b>Window Value Function</b></summary>
+
+We also call it Analytics Functions
+
+What are Window Value Functions?
+
+We have a data in a table inside database.
+
+| Months | Sales |
+|--------|-------|
+| Jan    | 20    |
+| Feb    | 10    |
+| Mar    | 30    |
+| Apr    |  5    |
+| Jun    | 70    |
+| Jul    | 40    |
+
+Now, We can use the Window Value Function to **Access a value from another row**
+
+Suppose, SQL is processing the months, we are currently at March. <br/>
+Now we want to access the value from the previous month from feb. <br/>
+So, in order to do that, we can use ```LAG()``` function to get the value of Feb which is 10. <br/>
+With that we have in the same row we have the value of March which is current sales value & Feb which is the previous sales value. <br/>
+May be in another case, we want to get sales from next month in the current sales. <br/>
+In order to do that we can use ```LEAD()``` function to get the value of Apr which is 5 in the same current row. <br/>
+With that we can compare current month, previous month & next month sales. <br/>
+Now, If you want to get the sales of first month Jan which is 20, in order to get the value of first month we can use ```FIRST_VALUE()``` to get the value of the first month sales value. <br/>
+Similarly for the last month sales we can use ```LAST_VALUE()``` function. <br/>
+
+This is exactly the purpose of Window Value functions, that we can get acces to values from another rows. <br/>
+
+The Value functions is like Ranking function, we have to use ```ORDER BY``` in order to sort data in order to understand what is the first row and the last row. In the above example data is sorted by months. <br/>
+
+The Window Value functions are really important for analytics, we can use it in order to access a value from other rows in order to do comparison.
+
+**Syntax of Window Value functions**
+
+| Window <br/> Value Functions      | Expression     | Partition Clause | Order Clause | Frame Clause  |
+|-----------------------------------|----------------|------------ -----|--------------|---------------|
+| ```LEAD(expr, offset, default)``` | All Data types |  Optional        | Required     | Not Allowed   |
+| ```LAG(expr, offset, default)```  | All Data types |  Optional        | Required     | Not Allowed   |
+| ```FIRST_VALUE(expr)```           | All Data types |  Optional        | Required     | Optional      |
+|  ```LAST_VALUE(expre)```          | All Data types |  Optional        | Required     | Should be used|
+
+| Window <br/> Value Functions      | Definition                             |  Syntax                                           |
+|-----------------------------------|----------------------------------------|---------------------------------------------------|
+| ```LEAD(expr, offset, default)``` | Returns the value from a previous row  | ```LEAD(sales,2,10) OVER(ORDER BY order_date)```  |
+| ```LAG(expr, offset, default)```  | Returns the value from a sunsequent row| ```LAG(sales,2,0) OVER(ORDER BY order_date)```    |
+| ```FIRST_VALUE(expr)```           | Returns the first value in a window    | ```FIRST_VALUE(sales) OVER(ORDER BY order_date)```|
+|  ```LAST_VALUE(expre)```          | Returns the last value in a window     | ```LAST_VALUE(sales) OVER(ORDER BY order_date)``` |
   
 </details>
+
+<details>
+ <summary> <b> <code>LEAD()</code> and <code>LAG()</code> Window Value Functions</b> </summary>
+
+- ```LEAD()``` access a value from the next row within a window.
+- ```LAG()``` access a value from the previous row within a window, 
+
+```python
+        LEAD(sales,2,10) OVER(PARTITION BY product_id ORDER BY order_date)
+
+        LAG(sales,2,10) OVER(PARTITION BY product_id ORDER BY order_date)
+```
+- ```LEAD()``` requires an expression (any datatype) like sales is here
+- 2 is offset here, which is optional : Number of rows forward or backward from current row, default offset is 1.
+- 10 is Default value, which is also optional : Returns default value if next/previous row is not available, dafault Default is NULL.
+- ```OVER()``` clause in which we define the values
+- ```PARTITION BY``` is optional here, which divide the data
+- ```ORDER BY``` is required to sort the data other SQL doesn't know prev & next row data
+
+| Months | Sales |
+|--------|-------|
+| Jan    | 20    |
+| Feb    | 10    |
+| Mar    | 30    |
+| Apr    |  5    |
+
+```python
+   # Find the sales of next the month
+   # Find the sales of prev the month
+
+        LEAD(sales) OVER(ORDER BY month)
+        LAG(sales) OVER(ORDER BY month)
+```
+
+| Months | Sales | LEAD | LAG |
+|--------|-------|------|-----|
+| Jan    | 20    | 10   | NULL|
+| Feb    | 10    | 30   | 10  |
+| Mar    | 30    |  5   | 30  |
+| Apr    |  5    | NULL |  5  |
+
+```python
+   # Find the sales for the two months ahead
+   # Find the sales for the two months ago
+   
+
+        LEAD(sales,2) OVER(ORDER BY month)
+        LAG(sales,2) OVER(ORDER BY month)
+```
+
+| Months | Sales | LEAD | LAG |
+|--------|-------|------|-----|
+| Jan    | 20    | 30   | NULL|
+| Feb    | 10    |  5   | NULL|
+| Mar    | 30    | NULL | 20  |
+| Apr    |  5    | NULL | 10  |
+
+```python
+   # Find the sales for the two months ahead
+   # Find the sales for the two months ago
+
+        LEAD(sales,2,0) OVER(ORDER BY month)
+        LAG(sales,2,0) OVER(ORDER BY month)
+```
+
+| Months | Sales | LEAD | LAG |
+|--------|-------|------|-----|
+| Jan    | 20    | 30   |  0  |
+| Feb    | 10    |  5   |  0  |
+| Mar    | 30    |  0   | 20  |
+| Apr    |  5    |  0   | 10  |
+
+</details>
+<details>
+ <summary> <b>Use cases of <code>LEAD()</code> and <code>LAG()</code> </b></summary>
+
+1. Use case of ```LEAD()``` and ```LAG()``` : Month-Over-Month(MoM) Analysis
+- Here, We will do comparison Analysis
+
+**Time Series Analysis**
+
+The process of analyzing the data to understand patterns, trends and behaviors over time. 
+
+Do **year over year(YoY) Analysis** : Help us to analyzr the long-term overall growth/decline of the business's performances over time
+
+and Do **month over month(MoM) Analysis** : Helps us to analyze short-trends and discover patterns in seasonality.
+
+```python
+   # Task : Analyze the month-month-month(MoM) performance by finding the percentage
+   #        change in sales between the current & previous month
+
+        SELECT
+              *,
+              currentMonthSales - PrevMonthSales AS MoM_Change,
+              ROUND(CAST( (currentMonthSales - PrevMonthSales) AS FLOAT)/PrevMonthSales * 100, 2) as MoM_Perc
+        FROM (
+               SELECT
+                   MONTH(order_date) orderMonth,
+                   SUM(sales) currentMonthSales,
+                   LAG(SUM(sales)) OVER(ORDER BY MONTH(order_date)) PrevMonthSales
+              FROM Sales.orders
+              GROUP BY MONTH(order_date)
+        )
+```
+> ```MONTH()``` : extracts and returns the month from a given date.
+
+| order_id | order_date | Sales | month |
+|----------|------------|-------|-------|
+| 1        | 2026-01-01 | 1     | 10    |
+| 2        | 2026-01-05 | 1     | 15    |
+| 3        | 2026-01-10 | 1     | 20    |
+| 4        | 2026-01-20 | 1     | 60    |
+| 5        | 2026-02-01 | 2     | 25    |
+| 6        | 2026-02-05 | 2     | 50    |
+| 7        | 2026-02-15 | 2     | 30    |
+| 8        | 2026-02-18 | 2     | 90    |
+| 9        | 2026-03-10 | 3     | 20    |
+| 10       | 2026-03-15 | 3     | 60    |
+
+| Month | currentMonthSales |
+|-------|-------------------|
+| 1     | 105               |
+| 2     | 195               |
+| 3     |  80               |
+
+| Month | currentMonthSales | PrevMonthSales |
+|-------|-------------------|----------------|
+| 1     | 105               |   NULL         |
+| 2     | 195               |   105          |
+| 3     |  80               |   195          |
+
+- Here, we can see magic. It's very simple, we can use ```LEAD()``` and ```LAG()``` functions in order to access another values from another rows without doing any complicated JOINs & so on.
+
+| Month | currentMonthSales | PrevMonthSales | MoM_Change |
+|-------|-------------------|----------------|------------|
+| 1     | 105               |   NULL         |   NULL     |
+| 2     | 195               |   105          |     90     |
+| 3     |  80               |   195          |   -115     |
+
+| Month | currentMonthSales | PrevMonthSales | MoM_Change | MoM_Perc |
+|-------|-------------------|----------------|------------|----------|
+| 1     | 105               |   NULL         |   NULL     |  NULL    |
+| 2     | 195               |   105          |     90     |  85.7    |
+| 3     |  80               |   195          |   -115     |  -59     |
+
+2. Use case of ```LEAD()``` and ```LAG()``` : Customer Retention Analysis
+
+</details>
+
+
+<details>
+ <summary> <b> <code>FIRST_VALUE(expr)</code> and <code> LAST_VALUE(expre) </code></b> </summary>
+
+- Returns the first value in a window 
+
+```python
+       FIRST_VALUE(sales) OVER(ORDER BY order_date)
+```
+- Returns the last value in a window
+
+```python
+      LAST_VALUE(sales) OVER(ORDER BY order_date)
+```
+ 
+</details>
+
 <!------------------------------------------------>
 
 <!--------Chapter 8. Aggregation and Analytical Functions--------->
