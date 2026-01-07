@@ -273,8 +273,172 @@ This is How SQL database executes very simple SELECT Query.
 
 ## 9.1 Subqueries
 
+**A Query inside another Query.**
+
+
 <details>
-  <summary> <b> </b> </summary>
+  <summary> <b> What is Subqueries? </b> </summary>
+
+- A Query inside another Query
+
+Simple Query :
+```sql
+   SELECT *
+   FROM Sales.orders
+   WHERE order_id=1 
+```
+
+Query inside Query : Sub-Query
+```sql
+   SELECT *
+   FROM (
+          SELECT *
+          FROM Sales.orders
+          WHERE order_id = 1
+        )
+   WHERE order_date < '2026-01-01'
+```
+We call it Embedded-Query or a Sub-Query.
+
+First SQL execute the Sub-Query then Main Query. <br/>
+The result of Sub-Query doesn't send to user, the result will stay as an Intermediate Result and the Main Query interacts with this intermediate result from Sub-Query.
+
+Now Main Query can have two sources of data one from original database table and another from result of Sub-Query.
+
+> Sub-Query is a query inside the Main-Query, Sub-Query supports the Main-Query with data. <br/>
+> The job of Main-Query is to get those data & at the end shows final result.
+
+Once the execution of the sub-query is completely done, what SQL does is SQL destroys the intermediate result, you will not find it anywhere.
+
+The intermediate result of the Sub-query is only locally known from the Main-Query itself, It can't access from outside externally in any other query globally.
+
+> Sub-Query can be only used from the main Query.
+
+</details>
+
+<details>
+  <summary> <b> Why do we use Sub-Queries? </b> </summary>
+
+
+<br/> When to use Sub-Queries?  <br/>
+
+In a complex task, we might have to do several stuffs in our query. <br/>
+Like 
+
+Step 1. ```JOINs Table``` - We have to JOIN tables in order to prepare the data. 
+
+Step 2. ```FILTERING``` - Outcome of the JOIN should be filtered. 
+
+Step 3. ```TRANSFORMATIONS``` - On top of that we have to do transformations like Handling NULLs or Creating New Columns or other stuffs. 
+
+Step 4. ```AGGREGATIONS``` - At the end we have to do Data Aggregation like Summarizing the data or finding average. 
+
+If just start writing a SQL query without having any plan, you will ended up having a long complex SQL query. <br/>
+It is hard to write as well as to read. <br/>
+Instead of that we can divide our task based on steps. <br/>
+We should write one query section for each step. <br/>
+One query for Joining another for filtering and another one for transformation and last one for Aggregation. <br/>
+Here, each step is like preparation of next step. <br/>
+So, We can say each of those queries is a sub-query. <br/>
+All the Sub-squeries are doing preparation for the last step. <br/>
+And We call the last step as Main-Query. <br/>
+The whole things can exist in one single query. <br/>
+
+> Sometime we call ***Main-Query*** as ***Outer-Query*** and ***Sub-Query*** as ***Inner-Query***.
+
+We can have many Sub-Query inside Sub-Query and so on and form something called **Nested-Query**
+
+Using Sub-Query reduces the complexity and easier to read and logical flow inside the query.
+
+</details>
+
+<details>
+  <summary> <b>Sub-Query Category </b> </summary>
+
+For some Queries, there are many different types and categories.
+
+- Based on **Dependency** between Main-Query and Sub-Query <br/>
+There are mainly 2 types of Sub-Queries :
+1. **Non-Correlated Sub-Query** : Sub-Query that is independent from the Main-Query. 
+2. **Correlated Sub-Query** : Sub-Query that is dependent on the Main-Query.
+
+- Based on **Result type**, there is another group of Sub-Query. <br/>
+1. **Scaler Sub-Query** : It returns only one single value.
+2. **Row Sub-Query** : It returns multiple rows.
+3. **Table Sub-Query** : It returns multiple rows as well as multiple columns.
+
+- Based on **Location/Clauses** where the Sub-Query is going to be used within the Main-Query. <br/>
+1. **```SELECT``` Clause Sub-Query** : used in ```SELECT``` most common sub-query
+2. **```FROM``` Clause Sub-Query** :   used in  ```FROM``` most common sub-query
+3. **```JOIN``` Clause Sub-Query** :   used before joining tables
+4. **```WHERE``` Clause Sub-Query** :  used in order to filter data
+   - In the ```WHERE``` clause we have 2 different sets of operators.
+     - Comparison Operators ```<, <=, >, >=, =, !=``` 
+     - Logical Operators ```IN, ANY, ALL, EXIST```   
+
+</details>
+
+<details>
+  <summary> <b>Based on Result Types Sub-Query </b> : <code>Scaler Sub-Query </code>,<code>Row Sub-Query </code>,<code>Table Sub-Query</code></summary>
+
+We have different types of Sub-Query based on Results. <br/>
+This means based on the amount of data that the sub-query returns.
+
+**1. Scaler Sub-Query** 
+- It is a Sub-Query that returns only one single value.
+
+| Average |
+|---------|
+|   15    |
+```sql
+    SELECT
+       AVG(sales)
+    FROM Sales.orders
+```
+- This is a Scaler Query, where we have only one single value (one row, one column)
+
+**2. Row Sub-Query**
+- It is a Sub-Query that returns multiple rows and a single column.
+
+| Customer_id |
+|-------------|
+|   1         |
+|   2         |
+|   3         |
+|   4         |
+```sql
+   SELECT
+        customer_id
+   FROM Sales.orders
+```
+- This is Row Sub-Query that return multiple rows & one column.
+
+**3. Table Sub-Query**
+- It is a sub-query that return multiple rows & multiple columns.
+
+| order_id | order_date | Product |
+|----------|------------|---------|
+|   1      | 2026-01-01 | Gloves  |
+|   2      | 2026-01-04 | Caps    |
+|   3      | 2026-02-15 | Shoes   |
+|   4      | 2026-03-21 | Bag     |
+```sql
+    SELECT *
+    FROM Sales.order
+```
+- This is a table sub-query that return multiple rows & multiple columns.
+</details>
+
+<details>
+  <summary> <b>Based on Location/Clauses Sub-Query</b>: <code>FROM</code>,<code>SELECT</code>,<code>JOINs</code>,<code>WHERE</code> </summary>
+
+<br/> How to use Sub-Query in the different Clauses/locations?
+
+**Sub-Query in ```FROM``` Clause**
+- We typically use Sub-Queries in the ```FROM``` clause in order to create temporary result sets. </br>
+That acts as a table for the Main-Query.
+
+- In some scenario, we can't use the table directly from the database. So, We have to prepare it somehow before our actual query.
 
 </details>
 
