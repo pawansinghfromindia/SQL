@@ -14,6 +14,9 @@
 
 Aggregate Functions are amazing if you're a Data Analyst or Data Scientist where you're usually use Aggregate functions in order to uncover insights about data.
 
+<details>
+ <summary> Aggregate Functions </summary>
+
 So, Aggregate Functions accepts multiple rows as inputs and result output will be one single value.
 
 | Inputs                     | Aggregate Functions | Result | Explaination                 |
@@ -23,7 +26,8 @@ So, Aggregate Functions accepts multiple rows as inputs and result output will b
 | ```30 ,10, 50, 20, 40```   |    ```AVG()```      | 30     | (30+10+50+20+40)/5 = 30      |
 | ```30 ,10, 50, 20, 40```   |    ```MAX()```      | 50     | max value = 50               |
 | ```30 ,10, 50, 20, 40```   |    ```MIN()```      | 10     | min value = 10               |
- 
+
+</details>
 
 <details>
   <summary><b>Aggregate Functions with <code>GROUP BY</code> and without <code>GROUP BY</code></b></summary>
@@ -2193,7 +2197,7 @@ The Window Value functions are really important for analytics, we can use it in 
 | Window <br/> Value Functions      | Definition                             |  Syntax                                           |
 |-----------------------------------|----------------------------------------|---------------------------------------------------|
 | ```LEAD(expr, offset, default)``` | Returns the value from a previous row  | ```LEAD(sales,2,10) OVER(ORDER BY order_date)```  |
-| ```LAG(expr, offset, default)```  | Returns the value from a sunsequent row| ```LAG(sales,2,0) OVER(ORDER BY order_date)```    |
+| ```LAG(expr, offset, default)```  | Returns the value from a subsequent row| ```LAG(sales,2,0) OVER(ORDER BY order_date)```    |
 | ```FIRST_VALUE(expr)```           | Returns the first value in a window    | ```FIRST_VALUE(sales) OVER(ORDER BY order_date)```|
 |  ```LAST_VALUE(expre)```          | Returns the last value in a window     | ```LAST_VALUE(sales) OVER(ORDER BY order_date)``` |
   
@@ -2345,27 +2349,273 @@ and Do **month over month(MoM) Analysis** : Helps us to analyze short-trends and
 
 2. Use case of ```LEAD()``` and ```LAG()``` : Customer Retention Analysis
 
+**Customer Retention Analysis**
+Measure customer's behavior and loyalty to help businesses build strong relationship with customers.
+
+Let's see how ```LEAD()``` and ```LAG()``` functions in order to do customer retention analysis.
+
+```python
+     # Task : Analyze customer loyalty by ranking customers based on the average number of days between their orders.
+     # step 1. Simple select query on orders table
+     # step 2. days between their orders : We can do joins but we have LEAD() and LAG() functions
+     # step 3. Define the window OVER() and Partition by bcuz we are analyzing each customers and ORDER BY order_date
+     # Step 4. We have current_order_date and next_order_date, now we can subtract them in order to get date between them using DATEDIFF()
+     # Step 5. Calculte Average of those dates in order to do this we have to use sub-query
+     # Step 6. Rank the customer based on average_days based on inc order
+     # Step 7. Replace the NULL with longest value
+
+     SELECT
+           customer_id,
+           AVG(DaysUntilNextOrder) AS average_Days,
+           RANK() OVER(ORDER BY COALESCE(AVG(DaysUntilNextOrder), 999999) ASC) as AvgRank
+     FROM (
+           SELECT
+                 customer_id,
+                 order_id, 
+                 order_date current_Order,
+                 LEAD(order_date) OVER(PARTITION BY customer_id ORDER BY order_date) AS next_order,
+                 DATEDIFF(day, order_date, LEAD(order_date) OVER(PARTITION BY customer_id ORDER BY order_date)) AS DaysUntilNextOrder
+          FROM Sales.orders 
+          ORDER BY customer_id, order_date
+       )
+    GROUP BY customer_id
+```
+| order_id | customer_id | current_order |  next_order |
+|----------|-------------|---------------|-------------|
+| 3        | 1           | 2026-01-10    | 2026-01-20  |
+| 4        | 1           | 2026-01-20    | 2026-02-15  |
+| 7        | 1           | 2026-02-15    | NULL        |
+| 1        | 2           | 2026-01-01    | 2026-02-01  |
+| 5        | 2           | 2026-02-01    | 2026-03-10  |
+| 9        | 2           | 2026-03-10    | NULL        |
+| 2        | 3           | 2026-01-05    | 2026-02-05  |
+| 6        | 3           | 2026-02-05    | 2026-03-15  |
+| 10       | 3           | 2026-03-15    | NULL        |
+| 8        | 4           | 2026-02-18    | NULL        |
+
+> ```DATEDIFF()``` : Calculates the difference between two date values
+
+| order_id | customer_id | current_order |  next_order | DaysUntilNextOrder |
+|----------|-------------|---------------|-------------|--------------------|
+| 3        | 1           | 2026-01-10    | 2026-01-20  |  10                |
+| 4        | 1           | 2026-01-20    | 2026-02-15  |  26                |
+| 7        | 1           | 2026-02-15    | NULL        |  NULL              |
+| 1        | 2           | 2026-01-01    | 2026-02-01  |  31                |
+| 5        | 2           | 2026-02-01    | 2026-03-10  |  37                | 
+| 9        | 2           | 2026-03-10    | NULL        |  NULL              |
+| 2        | 3           | 2026-01-05    | 2026-02-05  |  31                |
+| 6        | 3           | 2026-02-05    | 2026-03-15  |  38                |
+| 10       | 3           | 2026-03-15    | NULL        |  NULL              |
+| 8        | 4           | 2026-02-18    | NULL        |  NULL              |
+
+This is the magic of ```LEAD()``` and ```LAG()``` functions, we can very easily access any information we need in same row in order to do analysis.
+With very simple query without joining stuffs.
+
+| customer_id | average_Days |
+|-------------|--------------|
+|   1         |  18          |
+|   2         |  34          |
+|   3         |  34          |
+|   4         |  NULL        |
+
+| customer_id | average_Days | Avg_Rank |
+|-------------|--------------|----------|
+|   4         |  NULL        |  1       |
+|   1         |  18          |  2       |
+|   2         |  34          |  3       |
+|   3         |  34          |  4       |
+
+> ```COALESCE()``` : Replaces NULLs by returning the first non-NULL value from a list.
+
+| customer_id | average_Days | Avg_Rank |
+|-------------|--------------|----------|
+|   1         |  18          |  1       |
+|   2         |  34          |  2       |
+|   3         |  34          |  3       |
+|   4         |  NULL        |  4       |
+
 </details>
 
 
 <details>
  <summary> <b> <code>FIRST_VALUE(expr)</code> and <code> LAST_VALUE(expre) </code></b> </summary>
 
-- Returns the first value in a window 
+- ```FIRST_VALUE(expr)``` allows us to access a value from the first row within a window. 
+- ```LAST_VALUE(expr)``` allows us to access a value from the last row within a window. 
 
 ```python
-       FIRST_VALUE(sales) OVER(ORDER BY order_date)
+       FIRST_VALUE(sales) OVER(ORDER BY month)
+       LAST_VALUE(sales) OVER(ORDER BY month)
 ```
-- Returns the last value in a window
+
+Default Frame : ```RANGE BETWEEN UNBOUNDED  PRECEDING AND CURRENT ROW```
+
+| Months | Sales | FIRST_VALUE | LAST_VALUE |
+|--------|-------|-------------|------------|
+| Jan    | 20    | 20          | 20         |
+| Feb    | 10    | 20          | 10         |
+| Mar    | 30    | 20          | 30         |
+| Apr    |  5    | 20          | 5          |
+
+Here, We can see, ```FIRST_VALUE()``` is working fine with default frame But It is really useless to use ```LAST_VALUE()``` with Default frame bcuz the value is same as sales.
+So with ```LAST_VALUE()```, we should not use Default Frame, the frame effect in order to get last value correctly.
 
 ```python
-      LAST_VALUE(sales) OVER(ORDER BY order_date)
+       LAST_VALUE(sales) OVER(ORDER BY month ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING)
+```
+| Months | Sales | LAST_VALUE | 
+|--------|-------|------------|
+| Jan    | 20    | 5          |
+| Feb    | 10    | 5          |
+| Mar    | 30    | 5          |
+| Apr    |  5    | 5          |
+
+```python
+   # Task : Find the lowest & Highest sales for each product
+
+   SELECT
+        order_id,
+        product_id,
+        sales,
+        FIRST_VALUE(sales) OVER(PARTITION BY product_id ORDER BY sales) AS lowestSales,
+        LAST_VALUE(sales) OVER(PARTITION BY product_id ORDER BY sales ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS highestSales,
+        FIRST_VALUE(sales) OVER(PARTITION BY product_id ORDER BY sales DESC) AS highestSales2,
+   FROM Sales.orders
+```
+| order_id | product_id |sales | Lowest | Highest | 
+|----------|------------|------|--------|---------|
+|  1       | 101        | 10   |  10    |  90     |
+|  3       | 101        | 20   |  10    |  90     |
+|  9       | 101        | 20   |  10    |  90     |
+|  8       | 101        | 90   |  10    |  90     |
+|__________|____________|______|________|_________|
+|  2       | 102        | 15   |  15    |  60     |
+|  7       | 102        | 30   |  15    |  60     |
+|  10      | 102        | 60   |  15    |  60     |
+|__________|____________|______|________|_________|
+|  5       | 104        | 25   |  25    |  50     |
+|  6       | 104        | 50   |  50    |  50     |
+|__________|____________|______|________|_________|
+|  4       | 105        | 60   |  60    |  60     |
+
+Note : We can use ```FIRST_VALUE()``` in order to find last value by sorting the data in DESCENDING Order.
+
+```python
+   SELECT
+        order_id,
+        product_id,
+        sales,
+        FIRST_VALUE(sales) OVER(PARTITION BY product_id ORDER BY sales DESC) AS highestSales2
+   FROM Sales.orders
+```
+| order_id | product_id |sales | Highest | 
+|----------|------------|------|---------|
+|  8       | 101        | 90   |  90     |
+|  3       | 101        | 20   |  90     |
+|  9       | 101        | 20   |  90     |
+|  1       | 101        | 10   |  90     |
+|__________|____________|______|_________|
+|  10      | 102        | 60   |  60     |
+|  7       | 102        | 30   |  60     |
+|  2       | 102        | 15   |  60     |
+|__________|____________|______|_________|
+|  6       | 104        | 50   |  50     |
+|  5       | 104        | 25   |  50     |
+|__________|____________|______|_________|
+|  4       | 105        | 60   |  60     |
+
+We can do same task by using ```MAX()``` and ```MIN()```
+```python
+   # Task : Find the lowest & Highest sales for each product
+
+   SELECT
+        order_id,
+        product_id,
+        sales,
+        MIN(sales) OVER(PARTITION BY product_id) AS lowestSales,
+        MAX(sales) OVER(PARTITION BY product_id) AS highestSales
+   FROM Sales.orders
+```
+
+```python
+    # Task : Find the lowest & Highest sales for each product
+    # We can solve this using 3 different functions.
+
+   SELECT
+        order_id,
+        product_id,
+        sales,
+        FIRST_VALUE(sales) OVER(PARTITION BY product_id ORDER BY sales) AS lowestSales,
+        LAST_VALUE(sales) OVER(PARTITION BY product_id ORDER BY sales ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS highestSales,
+        FIRST_VALUE(sales) OVER(PARTITION BY product_id ORDER BY sales DESC) AS highestSales2,
+        MIN(sales) OVER(PARTITION BY product_id) AS lowestSales3,
+        MAX(sales) OVER(PARTITION BY product_id) AS highestSales3
+   FROM Sales.orders
 ```
  
 </details>
 
+<details>
+ <summary>Use Case of <code> FIRST_VALUE() </code> and <code> LAST_VALUE() </code> </summary>
+
+**Use Case of ```FIRST_VALUE()``` and ```LAST_VALUE()```**
+
+1. Use Case of ```FIRST_VALUE()``` and ```LAST_VALUE()```  : Compare to Extremes
+
+- Compare to Extremes :How well a value is performing relative to extremes (lowest/highest)
+
+```python
+     # Task : Extend the previous task,
+     #        Find the difference in sales between the current and the lowest sales
+
+     SELECT
+        order_id,
+        product_id,
+        sales currentSales,
+        FIRST_VALUE(sales) OVER(PARTITION BY product_id ORDER BY sales) AS lowestSales,
+        sales - FIRST_VALUE(sales) OVER(PARTITION BY product_id ORDER BY sales) AS SalesDifference
+   FROM Sales.orders    
+```
+
+This is very important analysis in order to do comparison analysis.
+
+</details>
+
+<details>
+ <summary> <b> Summary of Window Value Functions</b> </summary>
+
+- Window Value functions are also know as Analytical Functions
+
+- Allows access to specific value from another row, this helps in order to do complex calculations with very simple SQL query without having joining table together like Self Joins.
+
+- Four Types of Value Functions :
+  - ```LAG()``` : Allows to access previous value
+  - ```LEAD()``` : Allows to access the next value
+  - ```FIRST_VALUE()``` : Allows to access the first value in a subset  
+  - ```LAST_VALUE()``` : Allows to access the last value in a subset  
+
+- Rules of Window Value Functions :
+  - Expressions : We can use Any Data Type (Number, String , Date)
+  - ```ORDER BY``` : must bcuz in order to sort the data
+  - ```PARTITION BY``` : is Optional.
+  -  Window Frame : Window Frame is optional, but for ```LAST_VALUE()``` It is recommended.
+
+- Use cases of Window Value Function :
+  - Time Series Analysis : YoY and MoM are classical & always first question in Data Analysis in order to measure growth/decline in businesses.
+  - Time Gap Analysis : Customer Retention, Customer behaviour like average days bwteen 2 orders
+  - Comaprison Analysis : Extreme Values | Lowest and Highest with current values
+
+</details>
 <!------------------------------------------------>
 
+We have covered everything about How to aggregate data using SQL and these Window functions are very important tool in How to do Data Analytics in SQL especially if you're a Data Scientist or Data Analyst.
+
+Intermediated Level is completed here!!
+How to filter Data?
+How to Combine Data?
+Functions in SQL
+
+Next we will see the Advanced Level 
 <!--------Chapter 8. Aggregation and Analytical Functions--------->
 
 [< Row-Level Functions](https://github.com/pawansinghfromindia/SQL/blob/main/07_Row-Level_Functions/row_level_functions.md) | 
