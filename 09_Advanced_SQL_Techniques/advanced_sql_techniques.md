@@ -434,11 +434,441 @@ This means based on the amount of data that the sub-query returns.
 
 <br/> How to use Sub-Query in the different Clauses/locations?
 
-**Sub-Query in ```FROM``` Clause**
+**1. Sub-Query in ```FROM``` Clause**
+> ```FROM Sub-Query``` used as temporary table for the main-query.
 - We typically use Sub-Queries in the ```FROM``` clause in order to create temporary result sets. </br>
 That acts as a table for the Main-Query.
 
-- In some scenario, we can't use the table directly from the database. So, We have to prepare it somehow before our actual query.
+
+- In some scenario, we can't use the table directly from the database. So, We have to prepare it somehow before we do our actual query.
+
+Syntax of SUb-Query inside the ```FROM``` Clause
+```sql
+     SELECT
+          col1, col2
+     FROM (SELECT column FROM table1 WHERE <condition>) AS alias  --many databases alias is optional but in few it is required!
+```
+```sql
+    -- Task : Find the products that have a price higher than the average price of all products.
+    -- Step 1. Calculate the average price of each product
+    -- Step 2. Filter the products where price > average price
+
+    --Main-query
+    SELECT
+         *
+    FROM 
+       --Sub-query
+       ( SELECT
+                 product_id,
+                 price,
+                 AVG(price) OVER() AS avg_price
+           FROM Sales.products ) t
+   WHERE price > avg_price;
+```
+The Sub-query is here, only to support the main-query. So, here we're preparing all the data that we need in order to have the final result for the main-query.
+
+So, This is how we use the Table Sub-Query inside the FROM Clause.
+
+> Tip : To check the intermediate results of a sub-query, highlight it and execute. 
+
+```sql
+   -- Task : Rank the customers based on their total amount of sales.
+   -- Step 1. Find the total amount of sales
+   -- Step 2. Rank them based on their total sales
+
+      SELECT
+          *,
+          RANK() OVER(ORDER BY total_sales DESC) as customerRank
+      FROM (
+            SELECT
+                customer_id,
+                sales,
+                SUM(sales) OVER() total_sales
+            FROM Sales.customers ) t
+```
+How SQL execute the sub-query?</br>
+-The 1st step is SQL will identify the sub-query & then execute it. </br>
+-Once the sub-query is executed, the next step is Result is going to be introduced as an Intermediate Result which is not visible in output, It is temporarily saved in memory. </br>
+-Next step SQL will take is start executing Main-Query based on intermediate result. </br>
+-Output of main-query is Final Result.
+
+
+**2. Sub-Query in ```SELECT``` Clause**
+> Used to aggregate data side by side with the main-query's data, allowing for direct comparison.
+
+- We typically use the sub-query in the SELECT Clause to aggregate the data side by side with the columns of the main-query.
+
+How to use sub-query in ```SELECT``` clause?
+
+Syntax of the sub-query in ```SELECT``` clause
+```sql
+      SELECT
+           column1,
+           (SELECT column FROM table2 WHERE condition) AS column2
+      FROM table1
+```
+> Note : The result of sub-query must be **Scaler Query**. Means, the result must be a single value.
+
+```sql
+    -- Task : Show the product ids, product names, prices and the total number of orders.
+
+       SELECT
+           product_id,
+           product_name,
+           price,
+           ( SELECT COUNT(*) FROM Sales.orders ) AS TotalOrders
+       FROM Sales.products
+```
+This is what we call scaler-query inside the ```SELECT``` clause.
+
+How SQL execute the above query? </br>
+-1st SQL will identify the sub-query & execute it. </br>
+-Sub-query is targeting the orders table where we're simply counting the orders, so result of this sub-query acts as intermediate result which be stored in cache. </br>
+-Now SQL will start executing Main-query by passing it intermediate result. </br>
+-SO, SQL is targeting the table products so it will get all those columns from product and that one column from the intermediate result. </br>
+-And return the final result of the main-query. </br>
+
+- It's very simple SQL always start with sub-query and then pass the value to the main-query and at the end main-query will be executed & we will get the final result. 
+
+**3. Sub-Query in ```JOIN``` Clause**
+> Used to prepare the data(filtering or aggregation) before joining it with other tables.
+- Sometime we have to prepare the data before doing the join to dynamically create a result set for joining with another table. 
+- Here, We can't join table directly, we have to prepare data before doing joins.
+ 
+How to use sub-query in ```JOIN``` clause?
+
+```sql
+    -- Task : Show all the customers details and find the total orders of each customer.
+    -- Of Course, we have multiple solution for this.
+    -- Here, We will solve this task using Sub-query.
+    -- part1. Show all the customer details
+    -- part2. find the total orders for each customer
+
+   --Main-Query
+   SELECT
+         c.*,
+         o.TotalOrders
+   FROM Sales.customers c
+   LEFT JOIN 
+   --Sub-query
+   (SELECT
+        customer_id,
+        COUNT(*) AS TotalOrders
+   FROM Sales.orders
+   GROUP BY customer_id) o
+   ON c.customer_id = o.customer_id
+```
+
+This is how we use sub-query inside JOINs.
+
+**4. Sub-Query in ```WHERE``` Clause**
+> Used for complex filtering logic and make query more flexible and dynamic.
+
+- In SQL, we can filter the tables using the ```WHERE``` clause by putting static value like ```SELECT * FROM Sales.orders WHERE sales > 100```
+But in real Data Projects, we filter the data based on complex logic. So, In order to prepare this complex logic we use sub-query in ```WHERE``` clause to make filter more flexible and dynamic for main-query.
+
+- In order to filter data using ```WHERE``` clause we have to use operators.
+1. **Comparison Operators** : ```<, <=, >, >=, =, != or <> ```
+2. **Logical Operators** or **Sub-query Operators**   : ```IN()```, ```ANY```, ```ALL```, ```EXIST```
+
+How to use sub-query in the ```WHERE``` clause?
+
+**Comparison Operators**
+> **Used to filter data by comparing two values** in order to filtering the data based on specific condition
+
+| Comparison Operators | Name                    | Syntax                                               | 
+|----------------------|-------------------------|------------------------------------------------------|
+| ```=```              | Equal to                | ```WHERE sales = (SELECT AVG(sales) FROM orders)```  |
+| ```!=``` or ```<>``` | Not Equal to            | ```WHERE sales != (SELECT AVG(sales) FROM orders)``` |
+| ```>```              | Greater than            | ```WHERE sales > (SELECT AVG(sales) FROM orders)```  |
+| ```>=```             | Greater than or Equal to| ```WHERE sales >= (SELECT AVG(sales) FROM orders)``` |
+| ```<```              | Less than               | ```WHERE sales < (SELECT AVG(sales) FROM orders)```  |
+| ```><=```            | Less than or Equal to   | ```WHERE sales <= (SELECT AVG(sales) FROM orders)``` |
+
+Syntax of Sub-query in ```WHERE``` clause
+```sql
+    SELECT
+          columns1,
+          columns2
+    FROM table1
+    WHERE column = (SELECT column FROM table2 WHERE condition)
+```
+> Rule : Sub-query must be scaler sub-query which means must return only one single value.
+
+```sql
+   -- Task : Find the products that have a price higher than the average price of all products.
+    --Main-query
+    SELECT
+          *
+    FROM Sales.products
+    WHERE price > (SELECT AVG(price) FROM Sales.products) --Sub-query must have single row
+```
+How SQL will execute the above query? <br/>
+-1st SQL will identify the SUb-query & execute it. <br/>
+-The result of sub-query is considered as intermediate result and will be stored in Cache memory. So, we will not see this in output. <br/>
+-Next step is SQL will start executing Main-query where intermediate result will be passed to this main-query. <br/>
+-Now, SQL will select only product where the price is higher than average value. <br/>
+-In the output we will get the final result.
+
+
+In some scenario we have to filter the data based on multiple values, In this case we use logical operator with ```WHERE``` clause.
+
+**Logical Operators** or **Sub-query Operators**
+
+| Logical Operators    | Definition                                           n    | Syntax                                | 
+|----------------------|-----------------------------------------------------------|---------------------------------------|
+| ```IN``` Operator    | Checks whether a value matches any value from a list      | ```WHERE sales IN (1,2,3,4)```        |
+| ```NOT IN``` Operator| Checks whether a value not matches any value from a list  | ```WHERE sales NOT IN (1,2,3,4)```    |
+| ```ANY``` Operator   | Checks if a value matches ANY value within a list         | ```WHERE sales < ANY (1,2,3,4)```     |
+| ```ALL``` Operator   | checks if a values matches ALL value within a list        | ```WHERE sales < ALL (1,2,3,4)```     |
+| ```EXISTS``` Operator    | Check if a subquery returns any rows         | ```WHERE EXISTS (SELECT 1 FROM table1 WHERE table1.ID = table2.ID```|
+| ```NOT EXISTS``` Operator| Check if a subquery doesn't return any rows  | ```WHERE NOT EXISTS (SELECT 1 FROM table1 WHERE table1.ID = table2.ID```|
+
+
+The big difference between comparison operator and logical operator using with ```WHERE``` clause is that ***Sub-query with logical operators allow to have multiple rows*** unlike ***Sub-query with comparison operators allow only one single row(scaler)***.
+
+**```IN``` Operator**
+>  Checks whether a value matches any value from a list.
+
+**```NOT IN``` Operator**
+>  Checks whether a value doesn't match any value from a list.
+
+Syntax of a sub-query using ```IN``` Operator :
+```sql
+     SELECT
+          column1,
+          column2
+     FROM table1
+     WHERE column IN (SELECT column FROM table2 WHERE condition) --Sub-query can have multiple rows
+```
+> ```IN()``` is Non-correlated Sub-query : Independent of the main-query & can be executed on its own.
+
+**```NOT IN```**
+```sql
+    -- Task : Show the details of orders made by customers in Germany.
+
+    SELECT
+         *
+    FROM Sales.orders
+    WHERE customer_id IN (SELECT customer_id FROM Sales.customers WHERE country = 'Germany' )
+
+  -- Task : Show the details of orders made by customers who are not from Germany.
+  SELECT
+         *
+    FROM Sales.orders
+    WHERE customer_id IN (SELECT customer_id FROM Sales.customers WHERE country != 'Germany' )
+  --or
+   SELECT
+         *
+    FROM Sales.orders
+    WHERE customer_id NOT IN (SELECT customer_id FROM Sales.customers WHERE country = 'Germany' )
+
+```
+How SQL execute the query? <br/>
+-1st thing SQL does is identify the sub-query & execute it. <br/>
+-Now, the result of the sub-query acts as intermediate result for the main-query which is stored in cache memory. <br/>
+-Next thing SQL does is Start executing main-query by considering the intermediate result as support for main-query with the filter. <br/>
+-Now, SQL return the final result of main-query.
+
+**```ANY``` Operator**
+> Checks if a value matches ANY value within a list. <br/>
+> Used to check if a value is true for AT LEAST one of the values in a list.
+
+**Note : ```ANY``` and ```ALL``` operators always used with comparison operators.**
+ 
+Syntax of a sub-query using ```< ANY``` Operator :
+```sql
+     SELECT
+           column1,
+           column2
+     FROM table1
+     WHERE column < ANY (SELECT column FROM table2 WHERE condition)
+```
+```sql
+    -- Task : Find female employees whose salaries are greater than the salaries of any male employees.
+
+    SELECT
+         employee_id,
+         employee_name,
+         gender,
+         salary
+    FROM Sales.employees
+    WHERE gender = 'Female' AND salary > ANY(SELECT salary FROM Sales.employees WHERE gender = 'Male')
+```
+
+**```ALL``` Operator**
+> Checks if a value matches ALL values within a list. <br/>
+> If we need to check whether a condition is true for every value in a list.
+
+**Note : ```ANY``` and ```ALL``` operators always used with comparison operators.**
+
+Syntax of a sub-query using ```< ALL``` Operator :
+```sql
+     SELECT
+           column1,
+           column2
+     FROM table1
+     WHERE column < ALL (SELECT column FROM table2 WHERE condition)
+```
+```sql
+   -- Task : Find female employees whose salaries are greater than the salaries of all male employees.
+
+   SELECT
+        employee_id,
+        employee_name,
+        gender,
+        salary
+   FROM Sales.employees
+   WHERE gender = 'Female' AND salary > ALL(SELECT salary FROM Sales.employees WHERE gender = 'Male')
+```
+
+Till here, we have learned almost everything about How to use the Sub-queries in different loactions/clauses.
+But didn't talk about ```EXISTS``` operator bcuz before that we have to understand a very important concept of Sub-query that is based on dependency COrrelated & Non-correlated Sub-query. 
+
+ **```EXISTS``` operator in Sub-query** (Correlated Sub-query)
+ > Check if a subquery returns any rows.
+
+- In some scenario, As we're querying the data from one table, and you want to check whether the rows of this table does exist in another table.
+  Means, You're checking existence of rows of one table in another table. In this scenario, we use the Sub-query with ```EXIST``` operator. 
+
+Syntax of ```EXISTS``` operator in a ```WHERE``` clause sub-query :
+```sql
+      SELECT
+           column1,
+           column2
+      FROM table2
+      WHERE EXISTS (SELECT 1 FROM table1 WHERE table1.ID = table2.ID)
+```
+> We don't specify any column before ```EXISTS``` like we do for comparison operators or other logical operators like ```IN, NOT IN, ANY, ALL```. bcuz we're not filtering based on a value or values, we're filtering based on logic. That's why we're using ```EXISTS``` keyword immediately. 
+
+How ```EXISTS``` works? <br/>
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/49137319-ffeb-469b-9bd7-88a61d15ecad" />
+
+- For each row in Main-query, It is going to execute the Sub-query, where Sub-query is going to evaluate that row. <br/>
+- If Sub-query doesn't return anything, then the Row that we're evaluating from the main-query will be excluded from the final results. <br/>
+- On the other hand, if Sub-query returns a value, then the row that we're evaluating from the main-query will be included in the final results. <br/>
+- So, Sub-query is used in order to do a test. like Do we have a result or don't and based on that SQL either include or exclude the row from the final result.
+
+This is the logic behind the ```EXISTS```!
+
+```sql
+   -- Task : Show the details of orders made by customers in Germany.
+
+     SELECT
+           *
+      FROM Sales.orders o
+      WHERE EXISTS (SELECT 1 FROM Sales.customers c WHERE c.country='Germany' AND c.customer_id = o.customer_id )
+
+     -- Why the value 1?
+     --It doesn't matter what you're selecting in the Sub-query, so you can go with * or a single column, multiple columns or a single static value.
+     -- We should go with 1 a static value which gives you better performance compared to * or any column.
+     -- Best practice is to use a static value 1 or 2 or anything. That's why 1.
+```
+
+**```NOT EXISTS```**
+```sql
+       -- Task : Show the details of orders which are not made by customers in Germany.
+
+     SELECT
+           *
+      FROM Sales.orders o
+      WHERE NOT EXISTS (SELECT 1 FROM Sales.customers c WHERE c.country='Germany' AND c.customer_id = o.customer_id )
+```
+How SQL executes Correlated Sub-query? <br/>
+- 
+
+</details>
+
+<details>
+  <summary> <b>Based on dependency Sub-query : </b> <code>Correlated Sub-query</code> and <code>Non-Correlated Sub-query</code></summary>
+
+Here, we're going to learn about Dependency between the Sub-query & Main-query like Sub-queries that depends on Main-query or that do not depends on Main-query.
+
+So, far what we have learned all of the Sub-queries are **Non-Correlated Sub-queries**.
+Now, We're going to see the **Correlated Sub-queriues**.
+
+**Non-Correlated Sub-query**
+> A Sub-query that run independently from the Main-query. <br/>
+> Means, These are Stand Alone Sub-query.
+
+**Correlated Sub-query**
+> A Sub-query that relies(depends) on values from the Main-query for each row it process. <br/>
+> Meaning, here Sub-query is totally dependent on the Main-query.
+
+In this scenario, We have data in a table inside the Database.
+Here, this time, SQL executes Main-query first.
+So, Main-query will query the database in order to get result and SQL will going to process results row by row.
+So what will happen is Main-query pass the 1st Row information to Sub-query.
+So, after Sub-query get the data from Main-query, Now SQL will execute the Sub-query and Sub-query will return a value.
+Now, SQL Main-query will check if there is a result from the Sub-query if yes then SQL will consider the row in Final Result.
+This happens only for the 1st Row.
+Similarly we again process whole thing for 2nd Row, 3rd Row and so on.
+Now after executing the Sub-query, there is no result in that case SQL Main-query doesn't consider this row in the final Result.
+And It will move on to the next row.
+So, This will keep happening as long as we have rows in Main-query.
+Once, we have processed all the rows of Main-query the final results will be presented in the Final Output.
+
+- Summary : Correlated Sub-query is always depending on the Main-query. And Sub-query will be going to executed for each row that we get from the Main-query.
+
+This is How Correlated Sub-query works. It is little bit more complicated than Non-Correlated Sub-query.!!
+Non-Correlated Sub-query is straight-forward, 1st Sub-query will be executed & output of it will act as intermediate result for the Main-query, Main-query will be executed now & we will get the final result.
+
+<img width="300" height="150" alt="image" src="https://github.com/user-attachments/assets/c3d4fdbf-2cea-4b52-b3ce-ccfd56654dfc" />
+
+```sql
+     -- Task : Show all customer details and find the total orders for each customer.
+     -- We have already solved this task using LEFT JOIN & Sub-query, But in SQL we have multiple ways to do same task.
+     -- Now, Let's solve it using Sub-Query & SELECT clause + Correlated Subquery
+
+    -- Main-query
+    SELECT
+          *,
+          (SELECT COUNT(*) FROM Sales.orders o WHERE o.customer_id = c.customer_id) AS totalOrders  --Sub-query
+    FROM Sales.customers c
+
+   SELECT customer_id, COUNT(*) FROM Sales.order GROUP BY customer_id
+   -- we can't use this as Sub-query bcuz this is table query which is not allowed in SELECT clause,
+   -- SELECT only accepts Scalar sub-query.
+   -- So, We can solve it using Correlated Query, which will depends on the Main-query.
+   -- In order to make it depends on the main-query we have to connect it through the aliasing and finding the relationship between 2 tables.
+   -- Here in this case we will make our sub-query dependent on the main-query.   
+```
+| customer_id | customer_name | country | score | totalOrders |
+|-------------|---------------|---------|-------|-------------|
+| 1           | Kevin         | USA     | 350   |  3          |
+| 2           | Rohit         | India   | 900   |  3          |
+| 3           | Mark          | Germany | 750   |  3          |
+| 4           | Marry         | USA     | 500   |  1          |
+| 5           | Steve         | USA     | NULL  |  0          |
+
+|                  |  Non-correlated Sub-query                                  |  Correlated Sub-query                                      |
+|------------------|------------------------------------------------------------|------------------------------------------------------------|
+| ```Definition``` | Sub-query is **independent** of the main-query             | Sub-query is **dependent** of the main-query               |
+| ```Execution```  | Executed **once** and its result is used by the main-query | Executed for **each row** processed by the main-query      |
+|                  | **Can be** executed on its own                             | **Can't be** executed on its own                           |
+|```Easy to use``` | **Easier** to read and simple                              | **Harder** to read and more complex                        |
+|```Performance``` | Executed **only once** leads to **better performance**     | Executed **multiple times** leads to **better performance**|
+|```Usage```       | Static Comparison, **filtering with Constants**            | Row-by-Row Comparison, **Dynamic filtering**               | 
+
+Now, Let's see What is ```EXISTS``` operator in Sub-query?
+
+</details>
+
+<details>
+  <summary> <b>How Database execute Sub-queries?</b> </summary>
+
+Let's understand How database executes Sub-queries behind the scene?
+
+- Suppose you're a Data Analyst & you're writing a query on client side where you have a sub-query inside the main-query.
+- So, Once you execute your query, ***Database Engine will first Identify the Sub-query & execute the Sub-query first***.
+- Sub-query is like selecting & retrieving data from the table, means Database has to ***retrieve the data from the Disk Store where the table is stored***.
+- Once the Sub-query is executed, the result of Sub-query act as an ***Intermediate Result which is stored in Cache Memory***. Means, result of the Sub-query is temporary as well as very fast to retrieve.
+- Once the Database is done with Sub-query, Database ***starts executing the main-query***.
+- Main-query will go and interact with Cache storage, where data can be retrieve very fast from the result of the sub-query stored in cache.
+- Once, It's done, It is going to forward the result to the Database Engine which ***return the final result to the client side***.
+- Once everything is executed, the ***Database Engine will clean up the Cache***. So, the result of sub-query will completely destroyed from cache in order to have free space for other queries.
+
+This is how Database Server execute the query behind the scene!!
 
 </details>
 
