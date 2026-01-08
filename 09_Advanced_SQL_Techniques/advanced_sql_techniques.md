@@ -775,7 +775,16 @@ This is the logic behind the ```EXISTS```!
       WHERE NOT EXISTS (SELECT 1 FROM Sales.customers c WHERE c.country='Germany' AND c.customer_id = o.customer_id )
 ```
 How SQL executes Correlated Sub-query? <br/>
-- 
+- This time, SQL will not start with the sub-query, this time SQL starts with Main-query, first It will identify the main-query and then start executing it.
+- But It's going to be executed row-by-row.
+- So, SQL is going to test row 1, so first row is customer_id 1, so Customer_id = 1 row will be going  to put under the test.
+- So, SQL will pass the customer_id from the main-query to sub-query.
+- So, SQL now will prepare the sub-query with following information, so SQL will execute sub-query for the customer_id = 1.
+- Once the sub-query is executed it will either return something or not. So in this case it will return 1 as customer_id is exist in table2.
+- So, Row1 from main-query passed the test and now this row will be included into the final result.
+- Similarly now SQL will start testing for row2 of the main-query if it pass the test again it will be included in the final result, if not so then it will be excluded from the final result.
+- And this process will repeat until we are done with all the rows of the main-query.
+- At the end of this SQL will present the final result as output.
 
 </details>
 
