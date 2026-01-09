@@ -1074,6 +1074,7 @@ Types of CTEs
 </details>
 
 **A. Non-Recursive CTEs** : ```Standalone CTE``` and ```Nested CTE```
+> Non-Recursive CTE is executed only once without any repetition.
 
 <details>
   <summary> <b> Standalone CTE </b> </summary>
@@ -1446,6 +1447,11 @@ But we can have have multiple CTEs.
 
 So, Here we have done a kind of Mini-Project, where we have analyze the customer information based on different aspects of data. We have done it like step by step. Now, we know How to write a complex queries using the help of CTEs. If anyone go through this SQL script, It is easy to understand as It is divided into multiple steps and each block is responsible for one specific problem of the whole report. This is the power of CTE. It introduces modularity. This is an amazing way on how to organize the project using SQL and How to structure works in SQL.
 
+</details>
+
+<details>
+  <summary>Best Practices of using CTEs </summary>
+
 **Best Practice of CTEs**
 
 > ***"With great Power comes great Responsibility."***
@@ -1454,19 +1460,288 @@ All the SQL Developers, across the different projects, all of them love using CT
 But problem with CTE is Its overuse. Of course, CTE is powerful. But with power comes responsibility.
 So,Advice is try to not add a new CTE each time, you're doing something new.
 
-If you think using CTEs, everything is organized and easy to read but if you have a lot of CTEs especially if they're nested. It is impossible to understand what is going on.
+If you think using CTEs, everything is organized and easy to read but if you have a lot of CTEs especially if they're nested. It is impossible to understand what is going on. even if developer describe each CTE with the task.
+
+So, It is impossible to read & understand as well as It will take a lot of memory which might get bad performance.
+
+> 1. Rethink and refactor your CTEs before starting a new one.
+> 2. Don't use more than 5 CTEs in one query; Otherwise your code will be hard to understand and maintain.
+</details>
+
+
+**B. Recursive CTE**
+> It is Self-referencing query that repeatedly processes data until a specific condition is met.
+
+<details>
+  <summary> <b>Recursive CTE</b> </summary>
+
+- We usually use Recursive CTE if we have like hierarchical structure & we want to navigate and travel through the hierarchy.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/89eab1d3-a89c-407b-8490-34302e51416f" />
+
+**Syntax of Recursive CTE**
+```python
+
+# RECURSIVE-CTE
+  WITH CTE_Name AS
+  (
+     #Anchor Query : which is executed only once, provide 1st step
+     SELECT
+            column1,
+            column2,.....
+      FROM table1
+      WHERE condition
+
+     UNION ALL # Connector : To connect the achor query & recursive query
+     # Recursive Query : which is executed multiple times, keep repeating & add data to the intermediate result until the breaking point
+     SELECT
+           column1,
+           column2,....
+     FROM CTE_Name
+     WHERE [Break Condition]
+  )
+
+#MAIN-QUERY
+ SELECT
+       column1,
+       column2,.....
+ FROM CTE_Name
+ WHERE condition
+```
+- SQL will go and execute the Anchor-Query only once and there after SQL will execute Recursive-Query and keep executing reapeating it until a certain condition is met and then SQL will be out from CTE.
+
+```python
+  # Generate a sequence of number from 1 to 20
+
+  WITH CTE_Recursive AS
+  (
+    # Anchor Query
+    SELECT
+          1 AS myNumber
+    UNION ALL
+    # Recursive Query
+    SELECT
+         myNumber + 1
+    FROM CTE_Recursive
+    WHERE counting < 20
+  )
+
+# Main -Query
+
+SELECT
+     *
+FROM CTE_Recursive
+```
+| myNumber |
+|----------|
+|  1       |
+|  2       |
+|  .       |
+|  .       |
+|  .       |
+|  20      |
+
+> We can control How many recursion we can have in our query by defining it in the Main-query ```OPTION(MAXRECURSION 10)```
+> The Default recursion in SQL is 100.
+
+```python
+WITH Series AS
+  (
+    # Anchor Query
+    SELECT
+          1 AS myNumber
+    UNION ALL
+    # Recursive Query
+    SELECT
+         myNumber + 1
+    FROM Series
+    WHERE counting < 100
+  )
+
+
+# Main -Query
+SELECT
+     *
+FROM Series
+OPTION(MAXRECURSION 1000)
+```
+
+Let's see SQL execute the Recursive Query. 
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/ab254af3-dc01-4c1f-9ef1-ac0c4c845441" />
+
+- First step is to run Anchor-query, And It will be executed only once.
+- Next step, SQL will execute the Recursive-query, It will print myNumber + 1 which is 2  and then check for condition if myNumber < 20 again it will execute the recursive-query with this time myNumber become 2, so this time it will print 2 + 1 = 3 then check for condition where myNumber < 20 again myNumber is 2 only so It will again execute the recursive query and it will keep repeating this process until the condition is met,
+- So at the end when the myNumber will become 20 so the condition of myNumber < 20 will not satisfied and will be stop.
+
+```python
+# Task : Show the employee hierarchy by displaying each employee's level within the organization.
+
+WITH Emp_Hierarchy AS
+(
+   # Anchor Query : This is only for Top Level Manager
+   SELECT
+        employee_id,
+        employee_name,
+        manager_id,
+        1 AS Level
+   FROM Sales.employees
+   WHERE manager_id IS NULL
+   UNION ALL
+   # Recursive Query : Connecting Manager with Employees
+   SELECT
+        employee_id,
+        employee_name,
+        manager_id,
+        level+1 AS level
+   FROM Sales.employees e
+   INNER JOIN Emp_Hierarchy ceh 
+   ON e.manager_id = ceh.employee_id
+   # There's no need of WHERE as INNER JOIN is fiter here which shows only those rows which are common between 2 tables 
+)
+
+# Main Query
+SELECT *
+FROM Emp_Hierarchy
+```
+| Employee_id | Emp_name | Manager_id | Level |
+|-------------|----------|------------|-------|
+|   1         | Frank    | NULL       |  1    |
+|   2         | Kevin    | 1          |  2    |
+|   3         | Mary     | 1          |  2    |
+|   4         | Carol    | 3          |  3    |
+|   5         | Michael  | 2          |  3    |
+
+- In we have hierarchy in our data, and we can see in one table things are referencing each others like Manager_Id is actually the employee_id. So, Here we're referencing those Ids to each other. This means there is a hierarchy & there is a structure in this table. And we can use the Recursive CTE in order to build those level and to navigate as well.
+
+```
+         Frank              Level-1
+           │       
+           │
+ Kevin──────────────Mary    Level-2
+  │                   │   
+  │                   │
+Michael             Carol   Level-3
+```
+</details>
+
+<details>
+  <summary> <b>Summary of CTE</b> </summary>
+
+**CTE**
+- CTE(Common Table Expression) is a temporary, named result set (virtual table) that can be used at multiple places within the query.
+- 2 Types of CTE Non-Recursive CTE and Recursive CTE
+- Non-Recursive CTE : Standalone CTE which can be single or Multi-standalone CTE another is Nested CTE
+- Advantages of CTEs
+  - Readability : Break down complex query into smaller pieces
+  - Modularity : Smaller pieces are easy to manage, develop and self-contained
+  - Reusability : Reduce redundancies in the query
+  - Recursive : Helps in Iterations & Looping in SQL
+- Result of CTE is like Table but It can't be used from external query.
+- We can use the Result of CTE from Main-Query as well as another CTE can use the result of a CTE which leads to having Nested CTE.
+- We can use the Result of a CTE within itself which makes it Recursive CTE which allows Looping & Iterations.
+- **Tips** : Don't create more than 5 CTEs in one query.
 
 </details>
 
-**B. Recursive CTE**
-
+Next thing we will learn is a new type of object that we can use in database. We don't have only table in the database, We have Views. Views are amazing in order to give dynamic & flexible features in SQL project.
 
 <!-------------------CTE--------------------->
 ## 9.3 View - Views in Database
 
-<details>
-  <summary> <b> </b> </summary>
+Views is not like a query that we can use it in SQL. <br/>
+It is an object that we can find in the database. <br/>
+Before jumping to Views let's see the whole structure of the database. <br/>
 
+<details>
+  <summary> <b>Structure of Database</b> </summary>
+
+- on the top of the hierachy of database structure is SQL Server.
+- It manages multiple databases.
+- It is like a control centre that keep everything running and accessible.
+
+> **Database Server** stores, manages and provide access to databases for users or applications.
+> - Inside SQL Server we have multiple databases.
+
+> **Database** is a collection of information that is stored in a structured way.
+> - It is where all of data is stored & oraganized in different tables and objects.
+> - Each database is separated from others & has its own data.
+> - Inside each database we have multiple schemas.
+
+> **Schema** : is a logical layer that groups related objects together.
+> - a logical way on how to group up realted objects like tables and view together within a database.
+> - Example : We have database Sales which contains multiple tables, multiple views and objects about the Customers that will be put under Customer Schema. Similar way we can have another schema Orders which contains objects(tables,views) related to orders inside sales database.
+> - Inside each schema we have Tables
+> - Inside schema we have another type of object we call it View
+
+> **Table** : is a place where data is stored and organized into rows and columns.
+> - It is where data physically live.
+> - Inside Table we can define multiple stuffs like Columns, Keys
+
+> **View** : is a virtual table that shows data without storing it physically.
+> - It has structure and everything but inside it we don't have any data.
+> - So, View does not store data, in order to see the data we have to execute the query behind the view only after that we can see data but it's not like table which stores data permanently.
+> - Inside View also we can define multiple stuffs like Columns, Keys
+
+> For each **Column** we have a name & datatype.
+
+Here, We can see Databases are really organized & where in hierarchy Top node is SQL **Server** and Lowest node is **Columns & Rows**. This is what we called as **Database Structure**
+
+Now, in order to build and manage this structure, we have set of commands, we call it **DDL (Data Definition Language)**
+
+**DDL (Data Definition Language)** <br/>
+A set of commands that allows us to define and manage the structure of a database.
+- ```CREATE``` to create databases, schemas, tables, views
+- ```ALTER``` to modify or change in databases, schemas, table, views
+- ```DROP``` to remove databases, schemas, tables, views
+
+So, With this, we can say, we can create views inside the Server > database > schemas > Views.
+
+Note : Generally, We don't create Schema but when you navigate through Object explorer of your Server > Databases > Security > Schema > List of all schema will be there. How? we didn't created!
+
+Well, As we create a database in our SQL Server, we get a lot of other system default schemas created automatically. One of them is INFORMATION_SCHEMA where it holds a lot of views about Catalog and the metadata where we can find a list of columns, tables, views and other stuffs.
+
+```
+Database Server
+│ 
+├── Database1 (Sales)
+│      │
+│      ├── Schema1 (Customers)
+│      │      │
+│      │      ├── Tables(Rows & Columns)
+│      │      │     └── Columns (col2,col2,...)
+│      │      │     │     └── Name
+│      │      │     │     └── DataType
+│      │      │     └── Keys (PK, FK)
+│      │      │     └── Constraints
+│      │      │     └── Triggers
+│      │      │     └── Indexes etc etc..
+│      │      └── Views
+│      │            └── Columns (col2,col2,...)
+│      │            └── Keys (PK, FK)
+│      │
+│      └── Schema2 (Orders)
+│             │
+│             ├── Tables      
+│             │
+│             └── Views
+│
+├── Database2 (HR)
+│      ├── Schema1
+│      └── Schema2
+│
+│
+└── DatabaseN
+    ├── Schema1
+    ├── Schema2
+    └── SchemaN
+```
+</details>
+
+In order to understand View we also have to learn a fundamental concept **3-Level Architecture of the Database**
+
+<details>
+  <summary> Database <b>3 Levels Architecture </b> </summary>
 </details>
 
 <!-------------------View--------------------->
