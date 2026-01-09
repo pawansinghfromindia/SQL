@@ -881,13 +881,585 @@ This is how Database Server execute the query behind the scene!!
 
 </details>
 
+<details>
+  <summary> <b>Summary of Sub-query</b> </summary>
+
+**Sub-query** 
+- A query inside another query. <br/>
+- We use sub-query in order to break down a complex query into smaller, simpler and managable pieces, which makes easier to develop and read.
+
+**Use cases of Sub-query**
+- In order to create **temporary Result set** to used by another query.
+- In order to **Prepared the data before Joining the Tables**
+- In order to filter data **Dynamic & Complex filtering**
+- In order to check data existence in Correlated Query **Check the existence of Rows from another Table using ```EXISTS```**
+- In order to do **Row-by-Row Caomparison - Correlated Sub-query**
+
+</details>
+
+Here, We covered an important technique How to next query in order to solve complex problems.
+Next, we will learn another important twchnique on How to do multi-steps in SQL using CTE(Common Table Expression)
 <!--------------subqueries------------------->
 ## 9.2 CTE - Common Table Expression
 
+**CTE(Common Table Expression)** is temporary named result set like a virtual table that could be used multiple times within query to simplify and organize complex query.
+
 <details>
-  <summary> <b> </b> </summary>
+  <summary> <b> What is CTE (Common Table Expression) ?</b> </summary>
+
+> Temporary, named result set(virtual table), that can be used multiple times within the query to simplify and organize complex query.
+
+Let's understand CTE,
+Suppose we have data in a table inside the database.
+In a simple scenario, we write a simple SQL Query in order to retrieve the data from database & in the output we gets the result of the query.
+Now things get complicated in the project and we have to write query inside another query.
+Like one query is independent to another query.
+```sql
+    --CTE QUERY
+    SELECT *
+    FROM table1
+    WHERE condition
+
+    --MAIN-QUERY
+    SELECT *
+    FROM table2
+    WHERE condition
+```
+Now, what we can do is we can give the new query inside the main-query a name CTE and we can call this new query as CTE inside the main-query
+
+What SQL does in case of CTE Query?
+- 1st SQL executes the CTE-query, and we can get few information from database tables.
+- The output is going to available only in the query (output is in the shape of table, which is intermediate virtual table)
+- Now, in the Main-query we can start querying on that result from CTE(virtual Table) as like any normal table.
+- So, Main-query can retrieve information, manipulate it on top of that virtual table(CTE Query result)
+- Now, Main-query have two sources of tables, one is It can use tables from database as well as second It can access the CTE virtual table.
+- Once Main-Query executed, Everything is done the final result of the main-query is going to be presented for the user as a final result.
+> So, CTE query has one task where it generates a table that lives inside our query(virtual table), and we can use it as we want in our query.
+
+- This intermediate virtual table created from CTE Query has 2 features :
+1. Once the query ends, this intermediate virtual table will be destroyed by SQL in clean up process.
+2. The intermediate table will be only locally available in the same query, It not globally available like Database tables.
+
+### Difference between Sub-Query and CTE
+
+The story of this CTE query and Sub-Query seems like identical.
+
+Q : **What is Difference between Sub-Query and CTE ?** <br/>
+Well, Yes, both seems exactly same but still there are differences between them.
+ 
+- The way of writing Sub-Query is from Bottom to Top, where first Main-query is there and inside that we use Sub-query. on the otther hand CTE is written in Top to Bottom approach where we first write CTE and then use it anywhere in the main-query as amy places as many times we want.
+
+- Output of Sub-query can be used only once on the other hand out of CTE is a temporary intermediate virtual table so we can use it as many times as we want.
+  
+- The main difference between the Sub-query and CTE is from the name itself, common table expression.
+We think about the result of CTE as a table so, we can use it like SELECT, JOin with another table. So, Basically it is a hidden like virtual table lives within the query but Sub-query is totally different Its result is only for one position in the main-query. It is used only once. If we want to use the sub-query result at 2 or 3 different places, we have to write the sub-query at 2 or 3 places and times.
+That's why we have CTE apart from Sub-query.
 
 </details>
+
+<details>
+  <summary> <b>When to use & Why CTE ?</b> </summary>
+
+Why do we need CTE? <br/>
+What is the main purpose of CTE ?
+
+Let's say in a complex SQL task, we have to do following steps :
+Step 1. Joins the tables together in order to prepare all the data that we need.
+Step 2. We have to Aggregate the data like Summarization
+Step 3. Again JOIN the tables in order to perform different types of Aggregations again
+Step 4. Aggregation like Average
+
+- We have learned that we can use Sub-query in order to make this logic flow of a complex query.
+  like Step1. -> Sub-query1, Step2. -> Sub-query2, Step3. -> Sub-query3 and so on at last , Main-Query.
+
+Now, We keep doing this we will have problems, like repeating the same steps more than once. <br/>
+like We're joining the table twice in step1 and step3 for different purposes which have 2 different Sub-queries that cause **REDUNDANCY** <br/>
+So, Sub-query alone will be not enough to solve complex task. <br/>
+So, we have different techniques in order to solve our complex task. <br/>
+
+We can have only one step in order to join the table <br/>
+Step 1. JOIN <br/>
+Step 2. Aggregations (SUM) <br/>
+Step 3. Aggregations (AVG), here we don't need to join again, we can re-use the step1 <br/>
+We can do this with the help of **CTE** <br/>
+That reduces the number of steps which can reduce the size of query and increase performance.
+
+There are a lot of benefits of using CTE instead of using Sub-queries. We're bereaking down complex query into smaller pieces that are easier to write, manage, understand and logical flow.
+With all of those, we reduce RUNDENCIES of our code which lead to better performances.
+
+```sql
+   CTE_Top_Customers
+   SELECT *
+   FROM Sales.customers
+   WHERE conditions
+
+   CTE_Top_Products
+   SELECT *
+   FROM Sales.products
+   JOIN table
+
+   CTE_Daily_Revenue
+   SELECT *
+   FROM Sales.customers
+   JOIN table
+
+    --At th end, we can put everything together in the main-query
+
+   SELECT *
+    FROM CTE_1,CTE2,CTE3
+    WHERE conditions
+```
+### Advantages of using CTE inside the Query.
+
+CTE reduces the **REDUNDANCY** of code.
+- Means, Number of code will be reduce, which improves the performances
+
+CTE improves the **READABILITY** of query.
+- Means, code is divided into clear sections and making it easier to understand what each part does..
+
+CTE introduces the **MODULARITY**
+- Means, Instead of writting a huge query, It breaks code into smaller, managable parts.
+
+CTE provides the **REUSABILITY**
+- Means, We can have a result set that is used multiple times inside our query. Write the logic once and use it as many time you needs.
+
+</details>
+
+<details>
+  <summary> <b>How Database Execute CTE ?</b> </summary>
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/6434aca4-7a05-4dc2-8490-ed3cbbba8db8" />
+
+- Again, as a user(Data Analyst) at client side, writing a query where you defining a CTE called Details inside that you have some logic and inside the main-query we're selecting the data from a database table orders and joining it with Details CTE multiple times using multiple conditions. <br/>
+Once we execute this query, the Database Engine is going to read the query and identify the CTE with priority and It will execute the - CTE first. and let's say in CTE, you're retrieving data from a table which is stored in Disk Storage inside USER Data.
+Once CTE executed successfully, the Database Engine will place the result of CTE in Cache Memory & named it as Details like a table name.
+- Next step Database Engine will do is start executing Main-Query step by step. So in order to get the data from table orders, since orders table exists in Disk Storage inside User Data so, DB Engine retrieve it from there.
+Now DB Engine will check Details which is mentioned inside Main-query, as Details which is a virtual table lives in Cache memory. So, DB Engine start retrieving data from Details with high speed and then Join the Data with data of table of main-query.
+Again as many time we have joined in the main-query with details It will do the same.
+So, basically in the main-query we are using CTE result multiple times in different places and retrieval of all those information is happening with high speed this is the benefits of CTE is to utilize the high speed memory of the cache.
+- Once the main-query is completely executed, the result is going to return to the database engine then DB Engine sent it back to the client side & we will see the final result it in output.
+
+This is how Database Server execute CTE behind the scene.
+</details>
+
+<details>
+  <summary> <b>Types of CTE </b> <code>Non-Recursive CTE</code> and <code>Recursive CTE</code> </summary>
+
+We have different types of CTE.
+1. **Non-Recursive CTE**
+      - **Standalone CTE** : Single, Multi Standalone CTE
+      - **Nested CTE**
+2. **Recursive CTE**
+
+```
+Types of CTEs
+│    
+│
+└───Non-Recursive CTE
+│       │   
+│       │
+│       └───Standalone CTE
+│       │      │   
+│       │      └───Single Standalone CTE   
+│       │      │
+│       │      └───Multi-Standalone CTEs 
+│       │
+│       └───Nested CTE
+│
+│  
+│  
+└───Recursive CTE
+```
+    
+</details>
+
+**A. Non-Recursive CTEs** : ```Standalone CTE``` and ```Nested CTE```
+
+<details>
+  <summary> <b> Standalone CTE </b> </summary>
+
+> Defined and used independently. <br/>
+> Runs independently as it's self-contained and doesn't rely on other CTEs or queries.
+
+- It is a CTE query that is defined and used independently in the query.
+- Means, It is self-contained and it doesn't depend on any other CTE or queries.
+
+- We can run the Standalone query independently from anything inside our query.
+
+``` Database <-----> CTE ------> Intermediate Result <-------> Main-Query ------> Final Result```
+
+So, Simply CTE query the database and has one output. Since this CTE is independent from anything else we call it as standalone CTE.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/27a3ef31-397d-4273-9f34-827938733605" />
+Standalone CTE
+
+Here, If we compare the Stondalone CTE with Main-Query, Main-query can't be executed alone here, bcuz It needs the result from the CTE query.
+
+**Syntax of Standalone CTE**:
+```python
+    # This is how we define CTE using WITH Clause
+    WITH CTE_Name AS
+    (
+      SELECT .....
+      FROM .....
+      WHERE ....
+    )
+
+    -- This is how we use CTE in the Main-Query
+    SELECT ....
+    FROM CTE_Name
+    WHERE ....
+```
+So, We use query inside the ```WITH``` clause, we call it as a **CTE Query** where we define a CTE inside the ```WITH``` and Of course we don't want only to define CTE, so we can use CTE outside of definition.
+
+```python
+     ## Project 
+     # Step1. Find the total sales per customer
+     ## Since we have only one step, It make no sense to use CTE.
+     ## But we will use it since we know there will be other steps later
+
+      WITH CTE_TotalSales AS
+      (
+          SELECT
+               customer_id,
+               SUM(sales) AS totalSales
+          FROM Sales.orders
+          GROUP BY customer_id
+      )
+
+      ## Main-Query
+      SELECT
+         c.customer_id,
+         c.customer_name,
+         cte.totalSales
+      FROM Sales.customers c
+      LEFT JOIN CTE_TotalSales cte
+      ON cte.customer_id = c.customer_id
+```
+| customer_id | customer_name| totalSales |
+|-------------|--------------|------------|
+|  1          | Joseph Bibin | 110        |
+|  2          | Kevin Brown  | 55         |
+|  3          | Mark Wood    | 125        |
+|  4          | Rohit Negi   | 90         |
+|  5          | Pavan kalyan | NULL       |
+
+Here, customer_id and customer_name come from customer table and totalSales is coming from CTE as we don't have employee_id 5 in CTE orders table that's why it is NULL in the output. as we're doing LEFT JOIN.
+
+> **CTE Rule : We can't use ```ORDER BY``` directly within the CTE***. Rest everything we can use inside CTE definition.
+```python
+      WITH CTE_TotalSales AS
+      (
+          SELECT
+               customer_id,
+               SUM(sales) AS totalSales
+          FROM Sales.orders
+          GROUP BY customer_id
+          ORDER BY customer_id  # Throw Error
+      )
+
+      ## Main-Query
+      SELECT
+         c.customer_id,
+         c.customer_name,
+         cte.totalSales,
+      FROM Sales.customers c
+      LEFT JOIN CTE_TotalSales cte
+      ON cte.customer_id = c.customer_id
+```
+This was the simplest Standalone CTE.
+But we can have have multiple CTEs.
+
+**Multiple Standalone CTEs**
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/7ca75c6d-d4ef-4c3e-a836-7d190570829c" />
+
+- Here, in this example we have not only one CTE but have multiple CTEs in our query.
+- And Each CTE is standalone CTE, As SQL will execute all of those CTEs one by one from Top to Bottom.
+- All of the CTEs are independent of everything, so all will prepared their own intermediate results.
+- Then Main Query will retrieve all those informations and do prepare the final result for the end user.
+
+**Syntax of Multiple Standalone CTEs**:
+```python
+   ## CTE1
+   WITH CTE_Name1 AS
+   (
+      SELECT
+           column1,
+           column2,....
+      FROM table1
+      WHERE condition
+   )
+
+  , CTE_Name2 AS
+   (
+      SELECT
+           column1,
+           column2,....
+      FROM table2
+      WHERE condition
+   )
+
+  , CTE_Name3 AS
+   (
+      SELECT
+           column1,
+           column2,....
+      FROM table3
+      WHERE condition
+   )
+
+  , CTE_Name4 AS
+   (
+      SELECT
+           column1,
+           column2,....
+      FROM table1
+      WHERE condition
+   )
+
+  ## Main-Query
+  SELECT
+      column1,
+      column2,...
+  FROM CTE_Name1
+  JOIN CTE_Name2
+  JOIN CTE_Name3
+  JOIN CTE_Name4
+  WHERE condition
+```
+> Only the 1st CTE uses ```WITH``` clause in order to tell SQL about the definition of CTE and all the other CTEs will be defined separated using comma ```,``` intead of ```WITH```.
+
+```python
+     ## Project 
+     # Step1. Find the total sales per customer
+     # Step2. Find the last order date per customer
+
+# Step1. Find the total sales per customer
+      WITH CTE_TotalSales AS
+      (
+          SELECT
+               customer_id,
+               SUM(sales) AS totalSales
+          FROM Sales.orders
+          GROUP BY customer_id
+      )
+# Step2. Find the last order date per customer
+      , CTE_LastOrder AS
+      (
+            SELECT
+                 customer_id,
+                 MAX(order_date) AS lastOrder
+            FROM Sales.orders
+            GROUP BY customer_id
+      )  
+
+# Main-Query
+      SELECT
+         c.customer_id,
+         c.customer_name,
+         cts.totalSales,
+         clo.lastOrder
+      FROM Sales.customers c
+      LEFT JOIN CTE_TotalSales cts
+      ON cts.customer_id = c.customer_id
+      LEFT JOIN CTE_LastOrder clo
+      ON clo.customer_id = c.customer_id
+```
+| customer_id | customer_name| totalSales | lastOrder |
+|-------------|--------------|------------|-----------|
+|  1          | Joseph Bibin | 110        | 2026-02-15|
+|  2          | Kevin Brown  | 55         | 2026-03-10|
+|  3          | Mark Wood    | 125        | 2026-03-21|
+|  4          | Rohit Negi   | 90         | 2026-02-18|
+|  5          | Pavan kalyan | NULL       | NULL      |
+</details>
+
+<details>
+  <summary> <b>Nested CTE </b> </summary>
+> CTE inside another CTE. <br/>
+> A nested CTE uses the result of another CTE.
+> So, It can't run independently.
+
+- It is a CTE inside another CTE, kind of query inside another query.
+- So, Not only the Main-query can use the result of a CTE But another CTE can also use the result from a CTE.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/86428922-21cc-4cb4-a2b1-41a023b1cc59" />
+
+**Syntax of Nested CTE**
+```python
+     # STANDALONE CTE
+     WITH CTE_Name1 AS
+     (
+         SELECT
+               column1,
+               column2,....
+         FROM table1
+         WHERE condition
+      )
+      # NESTED CTE
+      , CTE_Name2 AS
+      (
+          SELECT
+               column1,
+               column2,....
+            FROM CTE_Name1
+            WHERE condition
+       )
+
+       # Main- Query
+         SELECT
+               column1,
+               column2,....
+         FROM CTE_Name2
+         WHERE condition
+```
+
+```python
+     ## Project 
+     # Step1. Find the total sales per customer
+     # Step2. Find the last order date per customer
+     # Step3. Rank the customers based on the total Sales per customer
+
+# Step1. Find the total sales per customer
+      WITH CTE_TotalSales AS
+      (
+          SELECT
+               customer_id,
+               SUM(sales) AS totalSales
+          FROM Sales.orders
+          GROUP BY customer_id
+      )
+# Step2. Find the last order date per customer
+      , CTE_LastOrder AS
+      (
+            SELECT
+                 customer_id,
+                 MAX(order_date) AS lastOrder
+            FROM Sales.orders
+            GROUP BY customer_id
+      )
+# Step3. Rank the customers based on the total Sales per customer (Nested CTE)
+      , CTE_CustomerRank AS
+      (
+             SELECT
+                   customer_id,
+                   RANK() OVER(ORDER BY totalSales DESC) AS custRank
+              FROM CTE_TotalSales
+      )
+
+## Main-Query
+      SELECT
+         c.customer_id,
+         c.customer_name,
+         cts.totalSales,
+         clo.lastOrder,
+         crs.custRank
+      FROM Sales.customers c
+      LEFT JOIN CTE_TotalSales cts
+      ON cts.customer_id = c.customer_id
+      LEFT JOIN CTE_LastOrder clo
+      ON clo.customer_id = c.customer_id
+      LEFT JOIN CTE_CustomerRank ccr
+      ON crs.customer_id = c.customer_id    
+```
+| customer_id | customer_name| totalSales | lastOrder | custRank |
+|-------------|--------------|------------|-----------|----------|
+|  3          | Mark Wood    | 125        | 2026-03-21|  1       |
+|  1          | Joseph Bibin | 110        | 2026-02-15|  2       |
+|  4          | Rohit Negi   | 90         | 2026-02-18|  3       |
+|  2          | Kevin Brown  | 55         | 2026-03-10|  4       |
+|  5          | Pavan kalyan | NULL       | NULL      | NULL     |
+
+```python
+ ## Project 
+     # Step1. Find the total sales per customer
+     # Step2. Find the last order date per customer
+     # Step3. Rank the customers based on the total Sales per customer
+     # Step4. Segment customers based on their total sales.
+
+# Step1. Find the total sales per customer (Standalone CTE)
+      WITH CTE_TotalSales AS
+      (
+          SELECT
+               customer_id,
+               SUM(sales) AS totalSales
+          FROM Sales.orders
+          GROUP BY customer_id
+      )
+# Step2. Find the last order date per customer (Multi-Standalone CTE)
+      , CTE_LastOrder AS
+      (
+            SELECT
+                 customer_id,
+                 MAX(order_date) AS lastOrder
+            FROM Sales.orders
+            GROUP BY customer_id
+      )
+# Step3. Rank the customers based on the total Sales per customer (Nested CTE)
+      , CTE_CustomerRank AS
+      (
+             SELECT
+                   customer_id,
+                   RANK() OVER(ORDER BY totalSales DESC) AS custRank
+              FROM CTE_TotalSales
+      )
+# Step4. Segment customers based on their total sales. (Nested CTE)
+       , CTE_CustomerSegment AS
+      (
+            SELECT
+                 customer_id,
+                 CASE
+                     WHEN totalSales > 100 THEN 'High'
+                     WHEN totalSales > 80 THEN 'Medium'
+                     ELSE 'Low'
+                 END AS custSegment
+            FROM CTE_TotalSales
+      )
+
+## Main-Query
+      SELECT
+         c.customer_id,
+         c.customer_name,
+         cts.totalSales,
+         clo.lastOrder,
+         crs.custRank,
+         ccs.custSegment
+      FROM Sales.customers c
+      LEFT JOIN CTE_TotalSales cts
+      ON cts.customer_id = c.customer_id
+      LEFT JOIN CTE_LastOrder clo
+      ON clo.customer_id = c.customer_id
+      LEFT JOIN CTE_CustomerRank ccr
+      ON crs.customer_id = c.customer_id
+      LEFT JOIN CTE_CustomerSegment ccs
+      ON ccs.customer_id = c.customer_id
+
+```
+| customer_id | customer_name| totalSales | lastOrder | custRank | custSegment |
+|-------------|--------------|------------|-----------|----------|-------------|
+|  3          | Mark Wood    | 125        | 2026-03-21|  1       |   High      |
+|  1          | Joseph Bibin | 110        | 2026-02-15|  2       |   High      |
+|  4          | Rohit Negi   | 90         | 2026-02-18|  3       |   Medium    |
+|  2          | Kevin Brown  | 55         | 2026-03-10|  4       |   Low       |
+|  5          | Pavan kalyan | NULL       | NULL      | NULL     |   NULL      |
+
+So, Here we have done a kind of Mini-Project, where we have analyze the customer information based on different aspects of data. We have done it like step by step. Now, we know How to write a complex queries using the help of CTEs. If anyone go through this SQL script, It is easy to understand as It is divided into multiple steps and each block is responsible for one specific problem of the whole report. This is the power of CTE. It introduces modularity. This is an amazing way on how to organize the project using SQL and How to structure works in SQL.
+
+**Best Practice of CTEs**
+
+> ***"With great Power comes great Responsibility."***
+
+All the SQL Developers, across the different projects, all of them love using CTE eveywhere, each time. It's okay. 
+But problem with CTE is Its overuse. Of course, CTE is powerful. But with power comes responsibility.
+So,Advice is try to not add a new CTE each time, you're doing something new.
+
+If you think using CTEs, everything is organized and easy to read but if you have a lot of CTEs especially if they're nested. It is impossible to understand what is going on.
+
+</details>
+
+**B. Recursive CTE**
+
 
 <!-------------------CTE--------------------->
 ## 9.3 View - Views in Database
