@@ -1842,11 +1842,11 @@ How we get data in View?
 </details>
 
 <details>
-  <summary> <b>Why do we need view? : Use cases of View </b> </summary>
+  <summary> <b>USECASE OF VIEWS </b> : Why do we need view? </summary>
 
-**Use case 1 : Central Logic in Complex Query**
+### **Use case 1 : Central Logic in Complex Query**
 
-We use view is **to store central logic from a complex query in the database** so that everyone can access it and we improve reusability between multiple queries which reduces the project complexity.
+> We use view is **to store central logic from a complex query in the database** so that everyone can access it and we improve reusability between multiple queries which reduces the project complexity.
 
 In our project, we have 2 tables Orders and Customers inside Sales database. <br/>
 We have learned that if we have a complex query, we can use **CTEs**. <br/>
@@ -1876,8 +1876,210 @@ This is exactly the magic of views in the Data Analytics.
 
 The logic/script/knowledge can be centralized in the database. This is way faster & better than having writing logic/script each time when someone need to do analysis.
 
-**Use case 2 : **
+### **Use case 2 : Hide Complexity**
 
+> Views can be use to hide the complexity of database tables and offers users more friendly and easy-to-consume objects.
+
+We use view in order to hide complexity and to improve abstraction.
+- In many scenario, we work with very large and complex databases, so we use view in order to reduce the complexity and make things easier for the users.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/9acc9348-3891-4ef8-89f6-5b11fe8b0e66" />
+
+
+We get an access to the database, where you want to do analysis.
+You will get a large database where the tables are very complex to understand. They have a lot of columns, column names will te technical & cryptical, How tables are connected to each other, relationships between tables, It's impossible to understand for everyone. To understand, we have to deeply involve with the data-model with documentations & with experts KT(Knowledge Transfer) to understand How to query the particular database.
+This things are done by Developers & Data Engineers But from End-User perspective, It is going be nightmare where you're stuck with multiple joins in order to make even simple analysis.
+
+Of course, from Database perspective this Data-model is good enough for one application but if you're opening your database for multiple Data Analysis Projects this can be nightmare bcuz we have to explain each user how to query data.
+
+So, what we usually do, instead of giving the direct access of technical & hard to understand Data-Model, Developers & Data Engineers(as they're Exerts of Data-Model) simply create multiple views.
+This new Views is an abstractions of the complexity that have in the technical & large database.
+We just have to make sure those Views are providing objects that are friendly.
+Like Normal plain English names of tables & columns, limited views which have lot of informations so that end-users don't have to joins things here & there for Analysis.
+
+> Basically end users have access to something more friendly & easy-to-consume, They just have to write simple query in order to do analysis on top of views.
+
+> This is what Developers & Data Engineers provides a Data Product from complex physical database.
+
+ This is how Views are important in order to provide abstraction and easy to consume objects for the end users.
+ Views Scripts are written only once by experts of Data-Model like Data Engineers & Developers.
+ This is how huge complex Data Projects will become easier for end user.
+
+ ```python
+# Task : Provide a view that combines details from orders, products, customers and employees.
+# orders table is central table that connects eveything.
+
+CREATE VIEW Sales.V_Order_Details AS (
+     SELECT
+        o.order_id,
+        o.order_date,
+        p.product,
+        p.category,
+        COALESCE(c.first_name, '') + ' ' + COALESCE(c.last_name,'') AS customer_name,
+        c.country AS customer_country,
+        COALESCE(e.first_name, '') + ' ' + COALESCE(e.last_name,'') AS sales_name,
+        e.department,
+        o.sales,
+        o.quantity
+    FROM Sales.orders o
+    LEFT JOIN Sales.products p
+    ON p.product_id = o.product_id
+    LEFT JOIN Sales.customer c
+    ON c.customer_id = o.customer_id
+    LEFT JOIN Sales.employees e
+    ON c.employee_id = o.salesPerson_id
+)
+
+# This result relatively big but still we have all the information in one view
+# & it is more friendly for the users to consume our data instead of joining 4 tables together
+
+
+
+SELECT
+      *
+FROM Sales.V_Order_Details
+```
+| order_id | order_date | product | category | customer_name | cust_country | Sales_name | department | sales | quantity |
+|----------|------------|---------|----------|---------------|--------------|------------|------------|-------|----------|
+| 1        | 2026-01-01 | Bottle  | Accessories | Kevin Brown| USA          | Mary       | Sales      | 20    |    1     |
+| 2        | 2026-01-05 | Tire    | Accessories | Mary       | Germany      | Carol      | Sales      | 120   |    1     |
+| 3        | 2026-01-10 | Gloves  | Clothing    | Kevin Brown| USA          | Frank      | Sales      | 220   |    2     |
+|..........| ...........|.........|..........|...............|..............|............|............|.......|..........|
+
+
+### **Use case 3 : Data Security**
+
+> Use vew to enforce security and protect sensitive data, by hiding columns or rows from tables.
+
+We use Views in order to implement Security & to protect our data in the database.
+
+In many scenario, we have sensitive information in our data and we can't share it with everyone. So, one of the best practice is to create views in order to protect your data before sharing it with users.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/aa85407e-77b2-4eb7-bf37-2fcf7b527cd8" />
+
+Suppose, We have a table orders, in our projects we have multiple people like Manager, Data Analyst other users which can be access the data.
+We can see here, we have different people with different roles but having same rights of accessing directly the table. All of them are seeing whole tables all rows all columns.
+In real project this is a big problem, because sometime data are sensitive & we can't give access to everyone.
+Of course if you're using only tables, It is going to nightmare, we can't create multiple tables bcuz it's hard to make all table sync.
+But Instead of that we have views, So we can remove all access to the physical table rather we can create multiple views for each role.
+Like create view order_managers, create another view orders_analyst which contains all the columns except the sensitive one, so here we protects sensitive information we call it ***Column-level Security***.
+Also create another views orders_users for other users, here we will not only protecting columns which are sensitive but also few rows bcuz we don't want to share few rows which are sensitive. So here we are protecting columns as well as rows ***Column-level + row-level security***
+
+- Creating views are really easy and It provides us a perfect tool in order to manage the security of our data.
+
+```python
+# Task : Provide a view for EU Sales Team that combines details from all tables and execludes data related to the USA.
+
+CREATE VIEW Sales.V_Order_Details_EU AS (
+       SELECT
+            o.order_id,
+            o.order_date,
+            p.product,
+            p.category,
+            COALESCE(c.first_name, '') + ' ' + COALESCE(c.last_name,'') AS customer_name,
+            c.country AS customer_country,
+            COALESCE(e.first_name, '') + ' ' + COALESCE(e.last_name,'') AS sales_name,
+            e.department,
+            o.sales,
+            o.quantity
+      FROM Sales.orders o
+      LEFT JOIN Sales.products p
+      ON p.product_id = o.product_id
+      LEFT JOIN Sales.customer c
+      ON c.customer_id = o.customer_id 
+      LEFT JOIN Sales.employees e
+      ON c.employee_id = o.salesPerson_id
+      WHERE c.country != 'USA'
+)
+
+
+SELECT
+      *
+FROM Sales.V_Order_Details_EU
+```
+| order_id | order_date | product | category | customer_name | cust_country | Sales_name | department | sales | quantity |
+|----------|------------|---------|----------|---------------|--------------|------------|------------|-------|----------|
+| 1        | 2026-01-01 | Bottle  | Accessories | Smith Brown| France       | Mary       | Sales      | 20    |    1     |
+| 2        | 2026-01-05 | Tire    | Accessories | Mary       | Germany      | Carol      | Sales      | 120   |    1     |
+|..........| ...........|.........|..........|...............|..............|............|............|.......|..........|
+
+So, We can say - Views are really great in order to provide security to our data whether we're protecting the columns or rows.
+
+### **Use case 4 : Flexibility & Dynamic**
+
+> We use Views in order to have more dynamic & flexibility in our projects.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/5d4a7a30-7324-408e-9c83-27734e0037cd" />
+
+
+If we have a table & multiple users accessing this table.
+Now as a requirement you have to change the Data-Model, like instead of one table split it into two tables or rename the table or rename few columns or add a new column & remove old column and so on. Basically making changes in your physical data-model & stuffs like rows in table.
+
+The problem with this is all those users who are accessing the table will scream bcuz all of them have a complex SQL queries & a small changes in table will break everything in their query, This means **Escalations** and We don't have freedom to change anything in our database without discussing with 100 people team.
+
+So, Instead of that, create a view and tell users to consume the view. Now you have freedom to do any changes you want.
+So, Now go to table and do splitting, renaming, adding, removing everything you want as long as you're updating the query between the table and view to make sure users are not noticing any change.
+
+For example 
+- If we want to split the table into 2 tables then we have to put join or union in View Query in order to re-construct the same structure that users are used to.
+- If you're renaming a column in your table, you can simply make the changes in your View Query.
+
+So, No-one is going to notice that you're doing changes in the physical table.
+
+Using Views & offering it to users is a game-changer for Data-Engineers & Developers bcuz giving users views will give more freedom, It is flexible & dynamic to change anything in your data-model without getting any headache.
+
+
+### **Use case 5 : Multiple Languages**
+
+> We can use Views in order to introduce a second version of our data-model in another language. So, We could offere multiple languages to users.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/fb4fbbec-2db5-48d5-8481-c1c81b8d729f" />
+
+Let's understand this through a scenario, We have a table orders data is persisted & everything is in English.
+Sometimes we have international team who are accessing your data. Like you have a team in Germany or in India who are end users who want to access your data.
+Of course, It depends on the number of users that are using your database. But if you have a lot of users  that comes from India as well as from Germany.
+It might make sense that you translate your data and table structure into another language.
+
+For example :
+- Instead of giving access to table orders, we can create another view called आदेश  That's in Hindi.
+- Same thing we can do for German Users.
+
+As we can see, we are using views in order to provide a translation for our database by just giving a new name for the views as well as for columns.
+
+
+### **Use case 6 : Virtual Data Marts**
+
+> Views can be used as a Data Marts in Data Warehouse System, because they provide a flexible & efficient way to present data.
+
+We can use views as a virtual Data Mart in a data warehouse. why is this favourite for every data engineer, bcuz this topic is very important decision in each project.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/13a5750a-85c4-4d13-8569-5e10daca2786" />
+
+
+A classical Data Warehouse architecture is based on the approach of M1 look like Source System - ERP System | CRM System | LOGS
+We have multiple source systems where our data are spreaded and would like to extract all our data from these multiple sources and put it in one big database called **Data WareHouse**. There will be a lot of operations on this central database(Data Warehouse) like 1st **Data Cleansing** and then may be **Data Integration**  together and may be building some historical data **Data Loading**. So basically we're doing multiple steps in order to prepare data for complex reporting and analysis.
+
+What we usually do at Data Warehouse is we store all those information as a physical table.
+Once We built the Data Warehouse, we will have multiple use cases that would like to access the data warehouse in order to do different reporting.
+It is going to be very complex if we connect immediately a reporting engine (PowerBI) directly to the data warehouse.
+But instead of this we try to split data warehouse into multiple subsets like Topic or Domain or Departments and we call those subset as **Data Marts**
+
+> A Data Mart is always specific for a usecase that focus on one topic. e.g.
+> - a dedicated Data Mart for Sales
+> - another Data Mart which is dedicated only for finance topic
+> Both of them comes from our Data Warehouse.
+
+The last layer is Reporting & Dashboarding where we have something tools like PowerBI to create a dashboard for one data mart sales and few stuffs from other data marts.
+
+Question is How should we store the data in Data Mart? <br/>
+Should we store the data in tables or in views.
+The best practice says if you're building Data Marts then use Views and we call this **Virtual Data Marts**
+
+There are many reasons why using views at a Data Mart is way better than using tables like views are more dynamic & quicker to change them bcuz usually at Data mart we're building a lot of business logic which requires flexibility  speed and maintainance effort is very simplified no need to build any ETLs or Data Loads from the Data warehouse to Data marts that makes the Data Warehouse as a real single point of truth for your data.
+Once you start copying the data from one layer to another layer, It is going to really hard to maintain, It becomes chaotic anf you have to have really restrict monitoring and data quality.
+That's why using views is always going to reflect the status of the data warehouse. This will help in Data Consistency which is a critical point in each Data Warehouse project.
+
+As we can see how views are playing a very important role in building a Data-Warehouse.
 </details>
 
 <details>
@@ -2098,13 +2300,57 @@ Transact-SQL is an extension of SQL that adds programming features like variable
 <details>
   <summary> <b>How database execute Views? </b> </summary>
 
+Let's say a Data Engineer creating a view called TopN.
+
+So, the query is going to sent to the Database Engine. Once DB Engine identify it as a View. Then DB Engine will go to Disk storage > System Catalog
+Catalog stores not only the metadata about the view but also the SQL Query that is responsible for view.
+
+So, DB Engine will take Query that is defined in create View ans place it as well in the System catalog.
+> So if your compare table, in System catalog memoey only table metadata is there, but for View its metadata + responsible create view query is also inside the Catalog.
+
+Here, Database Engine will not create table in Users Data memory of Disk Storage.
+So, Physical data will be not stored anywhere, We're storing only metadata & query of View inside System Catalog memory. 
+
+Now, SQL will tell Data Analyst, okay we have a new View and now Data Analyst can write a query in order to retrieve the data from the view.
+The DB Engine will take it and understand it that we're taking about view. So DB Engine first has to retrieve not the data but the query of View from System Catalog in order to understand what do we have to execute now. Then DB Engine will execute the query of the view first and then data for this query cames from a physical table called orders. Now DB Engine will querying the order to retrieve the data so that we have data for End User. Then It will execute the query and result will be send back to Data Analyst.
+
+As we can see, there are 2 queries. SQL Engine first execute the query from the view and only after that it will execute the next query which comes from the user.
+So, Actually the data always comes from the physical table but we're not providing the Data Analyst an access to the table, we are just providing the access of View.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/64fed585-0be5-4874-a3f8-9f835c5d58b7" />
+
+Now if Data Engineer wants to drop the view. So, he write a query in order to drop the view. The Database Engine will go to the System Catalog Memory delete both metadata & the query of the view. So, Here there will no user data lost at all. only Query and metadata of the view will be deleted.
+So, dropping view is not bad like dropping a table which cause lost of user data.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/7b920165-c666-4e5f-8cc0-dd926a5cc7b4" />
+
 </details>
+
+<details>
+  <summary> <b>View Summary</b> </summary>
+
+**Views**
+- View is virtual table that is based on the result of a query, without actually storing any data inside database.
+- We use views in order to persist a complex SQL Query logic in the database.
+- Views are better than CTEs in some scenario bcuz It improves resuability in multiple queries
+- Views are better than Tables in some scenario bcuz Views are flexible & easy to maintain
+**UseCases of Views**
+  - Store Central Logic in Complex Query to be resused
+  - Hide complexity by offering friendly views to users
+  - Data Security by hiding sensitive rows & columns
+  - Flexibility & Dynamic
+  - Offer your object in Multiple Language
+  - Virtual Layer (Data Mart) in Data Warehouse System.
+
+</details>
+
+Next we will learn about How to create table based on query? using Temporary table.
 
 <!-------------------View--------------------->
 ## 9.4 Temp Tables - temporary Tables
 
 <details>
-  <summary> <b> </b> </summary>
+  <summary> <b>CTAS & TEMP </b> </summary>
 
 </details>
 
