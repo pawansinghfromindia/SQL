@@ -1736,12 +1736,368 @@ Database Server
     ├── Schema2
     └── SchemaN
 ```
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/26d499df-eb7f-4966-bb62-2822036318b6" />
+
 </details>
 
 In order to understand View we also have to learn a fundamental concept **3-Level Architecture of the Database**
 
 <details>
-  <summary> Database <b>3 Levels Architecture </b> </summary>
+  <summary> Database <b>3 Levels Architecture :</b> <code>Physical layer</code> <code>Logical layer</code> <code>View layer</code> </summary>
+
+This architecture describe the different level of Data Abstraction in a database.
+
+The Architecture is divided into 3 levels :
+1. **Physical Level**
+2. **Logical Level**
+3. **View Level**
+
+
+
+**1. Physical Level** 
+- It is lowest level of the database where the actual data is stored in a physical storage.
+- Usually DBA has access to Physical Level bcuz DBAs are experts & they have to manage the access & security of this layers.
+- As an expert **DBA**, they have to manage a lot of stuffs like **Optimizing the performance, making sure evrything is secureand, managing the backups & recovery and all the configurations** etc etc.
+- At Physical Layer, we have to deal with lot of stuffs like **Data Files, Partitions, Logs, Catalogs, Blocks and caches** and other tuffs that database needs in order to store data.
+- So, Physical Layer is very complicated and we need to be expert in order to manage Physical Layer.
+- Sometime, Physical Layer is also known as **Internal Layer**.
+
+**2. Logical Level**
+- This is less complex than physical layer. Here, we have to deal with **How to organize you data?***
+- Normally **Application Developers** or **Data Engineers** who access the Logical Layer in order **to define structure of data**. So, Developers & Data Engineers are only focus on How to structure data rather than How the data is exactly stored physically at Physical layer. That's why we need abstraction for the role of Developers & Data Engineers.
+- What actually Developers & Data Engineers do at this logical layer is **Create tables & define the relationships between those tables**, **Create Views**, **Creates Indexes on table in order to optimize the performace of table**, **create Store procedures, functions and some codes in order to manage those tables**.
+- > So, Basically Developers & Data Engineers builds the Data Model, they structure data but they don't care about where are those data stored physically in the database.
+- So, Here things are little complicated in this Logical Layer and It is perfect abstraction for developers to build projects.
+- Sometime we call Logical Layer as **Conceptual Layer**.
+
+**3. View Level**
+- View layer is the **highest level of abstraction** in the database.
+- It is about **What the end users and applications can access and see?**
+- Example :
+  - We can have 1 View for Business Analyst, So Here, we prepare a customized Views that are suitable only for the Business Analyst.
+  - Another set of Views that are suitable for Data Visualization & reporting (Connect it through PowerBI in order to create Dashboard)
+- So, we can create multiple set of views that are suitable for specific purpose and use case.
+
+- So, at this View Layer, we're exposing our data for multiple-users and multiple-applications.
+- End Users and Applications have to only Views. They don't have to deal with the tables, indxes, Store Procedures, any files, logs, partitions or anything. This is the highest level of abstraction bcuz the focus of this layer is to make it friendly & easy to consume for the End users/applications.
+- Sometime, we call View Layer as **External Layer**.
+
+This is the 3-Level Architecture of the Databases or we call it 3 Abstraction level of the database!
+That's why Views are very important concept in SQL
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/64f1483e-f928-4f45-9795-4f5ff35e0b08" />
+
+</details>
+
+Let's get back to the View
+
+<details>
+  <summary> <b>What is View?</b> </summary>
+
+> View is a virtual table based on the result set of a query, without storing the data in database. <br/>
+> Views are persisted SQL queries in the database.
+- A view is a virtual table in SQL that is based on the result of a query, without actually storing the data in database.
+- In short, Views are stored or persisted SQL queries in the database.
+
+So, for we have seen a database table and we query our table in order to retrieve data from this table.Once we execute the query we will get the result. 
+
+Now, We talk about Views. They are also like Table which have structures but without any data inside it. 
+
+For each View there is a query attached to it. So, there is no data but have query in order to get data.
+
+> We call **Normal table as Physical Table** and **View as Virtual Table**
+
+How we get data in View?
+- So, If we write a query by selecting data from View. What SQL does is It triggers the query that is attached to View and this query is responsible to query the physical table and 
+- then the result of the query will fill the structure of the view and result is also loaded in the view.
+- So, Here we are directly querying the View but actually we're querying the physical table.
+- Basically Views are between us and data that means Real data is stored inside database table and **views are like abstraction layer between us and real data**
+- Of course, the data is not stored inside the view, each time we're querying View, SQL will execute the query behind the view.It will retrieve the data in view and then we see the data in output.
+
+</details>
+
+<details>
+  <summary> <b> Tables vs Views</b> </summary>
+
+**Table**
+- **persisted Data** : tables stores actual data physically inside database. So, tables is where **data is Persisted** physically.
+- **Hard to maintain**. It takes a lot of efforts in order to change like adding/removing columns.
+- **Fast Response** : tables are faster than views
+- **Read/Write** : We can read & write on tables.
+
+**View**
+- **No persistance** : Views are virtual tables, they don't store any data inside database, but they present the data from underlying tables. So, In views **No persistance data** physically.
+- **Easy to maintain**. It is very flexible to change, all what we have to do is change the query of the View.
+- **Slow Response** : bcuz getting data from view means 2 query first on View and second is behind the scene querying on table
+- **Only Read** : View are Read Only as the name itself says **View**. We can't write something to the database using the view
+
+| Table            |  View            |
+|------------------|------------------|
+| Persisted Data   | No persistance   |
+| Hard to Maintain | Easy to Maintain |
+| Fast Response    | Slow Response    |
+| Read & write     | Read Only        |
+
+</details>
+
+<details>
+  <summary> <b>Why do we need view? : Use cases of View </b> </summary>
+
+**Use case 1 : Central Logic in Complex Query**
+
+We use view is **to store central logic from a complex query in the database** so that everyone can access it and we improve reusability between multiple queries which reduces the project complexity.
+
+In our project, we have 2 tables Orders and Customers inside Sales database. <br/>
+We have learned that if we have a complex query, we can use **CTEs**. <br/>
+So, in an example, we're joining tables and doing aggregations like SUM. So, CTE is storing the data in intermediate results and then we have a main-query, we're ranking the data. So, whole thing is in one query. 
+- Let's say a financial Analyst is doing this analysis.
+- We have another user Budget Analyst, He is doing exactly same first step but in last step instead of ranking, doing MAX & MIN in the main-query.
+- We have another third user who is Risk Analyst, He is also doing same initial steps using CTE joining the tables & summarization But in last step He is just comparing the data in the main-query.
+
+Problem : <br/>
+If we look back to this, We can see all those 3 Data Workers are doing same initial first step like same CTE(Joining & Summarizing data).
+It is a complete waste of time that each of them has to create first CTE from scratch in order to analysis.
+It's redundancy and make no sense. 
+This is exactly the dis-advantage of only using CTEs in the complex query of project.
+
+Solution : <br/>
+What we can do instead of that, those 3 data workers decide let's put the 1st step as a View in the database.
+So, instead of using CTE each time, take this script and put it in database.
+Now a central logic that is stored in the database where everyone can use it.
+So, Now the Query logic that was repeated, is now only once execute & everyone can benefit from it.
+So, Now financial Analyst, instead of directly going to physical tables, He can go to the view.
+So Now he only needs to write one script Rank.
+Same for Budget Analyst he only need to write MAX,MIN script
+Similar way Risk Analyst also have to write only one script for comparison.
+
+Now We can see all those query are reduced and here we only focus on Analysis.
+This is exactly the magic of views in the Data Analytics.
+
+The logic/script/knowledge can be centralized in the database. This is way faster & better than having writing logic/script each time when someone need to do analysis.
+
+**Use case 2 : **
+
+</details>
+
+<details>
+  <summary> <b>View vs CTE</b> </summary>
+
+**CTE**
+- CTE is used to **reduce redundancy within 1 single query**
+- Improve **Resuability in 1 single query**
+- **Temporary Logic** Here, logic is not persisted, it is temporary and calculated only on the fly within the scope of 1 single query. So, this logic is important only in the single query. So, It doesn't make sense to persist this logic using the view.
+- **No Maintainance**, Database do **auto clean up** once the query is done. So no extra effort to drop a CTE
+
+**View**
+- View is used to **reduce redundancies from multiple queries**
+- Improve **Resuability in multiple-queries**
+- **Persisted Logic** : We use Views in order to persist a logic in the database. So, the logic is so important that we want to persist it in the database.
+- Creating Views always need extra steps, so **Need to Maintain**, CREATE/DROP views
+
+|                CTE                  |                View                   |
+|-------------------------------------|---------------------------------------|
+| Reduce Redundancy in single-query   | Reduce Redundancy in multiple-queries |
+| Improve Resuability in single-query | Improve Resuability in single-query   |
+| No Persisted Logic, only Temporary Logic, on the fly | Persisted Logic      |
+| No Maintainance, Auto Clean-up      | Need to Maintain, CREATE/DROP Views   |
+
+</details>
+
+<details>
+  <summary> <b> SQL Views</b> <code>CREATE</code>, UPDATE<code>REPLACE</code> <code>DROP</code> </summary>
+
+**Creating Views** using ```CREATE```
+
+We create views using the DDL Command ```CREATE VIEW view_name AS (SELECT * FROM table1 WHERE condition)```
+
+> Note : If a table or view is created without specifying a **Schema**, it defaults to the **DBO**
+- In order to put our view in correct schema instead of default schema. we have to specify the Schema Name. <br/>
+```CREATE VIEW schema_name.view_name AS (SELECT * FROM table1 WHERE condition)```
+
+**Syntax of View** :
+```python
+   CREATE VIEW view_name AS
+   (
+       #Query 
+       SELECT
+            col1,
+            col2,.....
+       FROM table1
+       WHERE condition
+   )
+```
+
+```python
+# Find the running total of sales for each month.
+# We can solve any task in SQL in different ways.
+# Here, Let's do it by using View as well as with CTE and then see the difference
+
+
+# Solving through CTE
+WITH CTE_Monthly_Summary AS
+(
+     SELECT
+          DATETRUNC(month, order_date) AS orderMonth,
+          SUM(sales) AS totalSales,
+          COUNT(order_id) AS totalOrders,
+          SUM(quantity) AS totalQuantity
+     FROM Sales.orders
+     GROUP BY DATETRUNC(month, order_date)
+)
+# Using CTE in main-query
+ SELECT
+      orderMonth,
+      totalSales,
+      SUM(totalSales) OVER(ORDER BY orderMonth) AS RunningTotal
+ FROM CTE_Monthly_Summary
+  
+
+
+# Solving through VIEW
+CREATE VIEW V_Monthly_Summary AS
+(
+     SELECT
+          DATETRUNC(month, order_date) AS orderMonth,
+          SUM(sales) AS totalSales,
+          COUNT(order_id) AS totalOrders,
+          SUM(quantity) AS totalQuantity
+    FROM Sales.orders
+    GROUP BY DATETRUNC(month, order_date)
+)
+# This will create a View named V_Monthly_Summary inside database
+# Now we can query the view
+
+SELECT *
+FROM V_Monthly_Summary
+
+```
+| Order_month | totalSales | totalOrders | totalQuantity |
+|-------------|------------|-------------|---------------|
+| 2025-01-01  | 105        |  4          |  6            |
+| 2025-02-01  | 195        |  4          |  8            |
+| 2025-03-01  | 80         |  2          |  2            |
+
+```python
+# Now we can query directly from the View
+# No need to write CTE Query
+
+SELECT
+    Order_month,
+    totalSales,
+    SUM(totalSales) OVER(ORDER BY Order_month) AS runningTotal
+FROM V_Monthly_Summary
+```
+| Order_month | totalSales | runningTotal |
+|-------------|------------|--------------|
+| 2025-01-01  | 105        |  105         |
+| 2025-02-01  | 195        |  300         |
+| 2025-03-01  | 80         |  380         |
+
+Note : If a table or view is created without specifying a **Schema**, it defaults to the **DBO**. <br/>
+So, In order to put our view in correct schema, bcuz we don't want our view to be default schema, we want our view in Sales Schema.
+So, Let's specify the Schema name while creating the view.
+
+```python
+CREATE VIEW Sales.V_Monthly_Summary AS
+(
+     SELECT
+          DATETRUNC(month, order_date) AS orderMonth,
+          SUM(sales) AS totalSales,
+          COUNT(order_id) AS totalOrders,
+          SUM(quantity) AS totalQuantity
+    FROM Sales.orders
+    GROUP BY DATETRUNC(month, order_date)
+)
+
+SELECT
+    Order_month,
+    totalSales,
+    SUM(totalSales) OVER(ORDER BY Order_month) AS runningTotal
+FROM Sales.V_Monthly_Summary
+```
+
+**Droping Views** using ```DROP```
+
+If we don't need the view you created in your database, basically you want to clean up your view. 
+We can do this by using the command ```DROP```
+
+```DROP VIEW view_name``` in case of default schema
+
+```DROP VIEW schema_name.view_name``` in specified schema
+
+```python
+DROP VIEW V_Monthly_Summary
+
+
+DROP VIEW Sales.V_Monthly_Summary
+```
+
+**Updating Views** using ```REPLACE``` or ```DROP```+```CREATE```
+
+If we want to change the logic of our view.
+How can we do that?
+We have 2 ways :
+ - We can do this using ```REPLACE```
+```sql
+CREATE OR REPLACE VIEW view_name AS (SELECT * FROM table1 WHERE condition)
+```
+ - First ```DROP``` the view and then ```CREATE``` view
+```sql
+DROP VIEW view_name;
+CREATE OR REPLACE VIEW view_name AS (SELECT * FROM table1 WHERE condition)
+```
+
+```python
+
+CREATE OR REPLACE VIEW V_Monthly_Summary AS
+(
+     SELECT
+          DATETRUNC(month, order_date) AS orderMonth,
+          SUM(sales) AS totalSales
+    FROM Sales.orders
+    GROUP BY DATETRUNC(month, order_date)
+)
+
+# OR
+
+DROP VIEW V_Monthly_Summary;
+
+CREATE OR REPLACE VIEW V_Monthly_Summary AS
+(
+     SELECT
+          DATETRUNC(month, order_date) AS orderMonth,
+          SUM(sales) AS totalSales
+    FROM Sales.orders
+    GROUP BY DATETRUNC(month, order_date)
+)
+
+```
+
+**T-SQL** <br/>
+If you want everthing in one command in SQL Server. Then use T-SQL, which is Transact-SQL. <br/>
+Transact-SQL is an extension of SQL that adds programming features like variables or checks(if)
+
+```python
+   IF OBJECT_ID ('Sales.V_Monthly_Summary', 'V') IS NOT NULL //if this object exists
+         DROP VIEW Sales.V_Monthly_Summary;
+   GO
+   CREATE  VIEW V_Monthly_Summary AS
+    (
+         SELECT
+              DATETRUNC(month, order_date) AS orderMonth,
+              SUM(sales) AS totalSales
+         FROM Sales.orders
+         GROUP BY DATETRUNC(month, order_date)
+   )
+
+```
+
+</details>
+
+<details>
+  <summary> <b>How database execute Views? </b> </summary>
+
 </details>
 
 <!-------------------View--------------------->
