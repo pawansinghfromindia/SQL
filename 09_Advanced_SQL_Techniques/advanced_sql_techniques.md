@@ -2347,7 +2347,7 @@ So, dropping view is not bad like dropping a table which cause lost of user data
 Next we will learn about How to create table based on query? using Temporary table.
 
 <!-------------------View--------------------->
-## 9.4 Temp Tables - temporary Tables
+## 9.4 CTAS - CREATE TABLE AS SELECT
 
 <details>
   <summary> <b>CTAS & TEMP </b> </summary>
@@ -2422,6 +2422,7 @@ There are 2 ways to create permanent tables :
 
 <img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/ccead2b0-7f9f-408a-91c5-7b085754d380" />
 
+<!-----------Types of Tables in SQL-------------->
 </details>
 
 <details>
@@ -2439,15 +2440,251 @@ Once, we execute insert, Data will be inserted into the newly created table.
 This new table with our data will be stored persisted permanently.
 
 ```CTAS - CREATE TABLE AS SELECT```is another method to create a new table based on the result of a SQL query.
+Here, only one step where we define a query and we execute this query, SQL Engine will retrieve the data from another table which is mentioned in the query. Once query is executed we will get the result, next what SQL Database Engine will do is create a new brand table but with definition and data from result of the mentioned query.
+So, the new table definition and data comes one to one from result of the mentioned query.
 
+So, CTAS method we don't need to define anything or insert any data, just write the query and the result of the query will defined the newly brand table as well as data will be loaded.
 
+CTS method always need database table in order to execute the query.
+
+<!-----------CREATE/INSERT vs CTAS-------------->
 </details>
 
-<!-------------------Temp Tables--------------------->
-## 9.5 CTAS - Create Tables AS SELECT
+<details>
+  <summary> <b>CTAS vs VIEWS</b> </summary>
+
+As we can see CTAS is very similar to VIEWS, as we have a query and output of this query is going to be an object in the database.
+So, what are the differences between them.
+
+Let's say we have a table in our database that has a column A,B,C.
+Now we can create a VIEW based on a query using DDL command ```CREATE```, Here SQL will store the query in the database System catalogs and VIEWS are empty, there is no data bcuz Views doesn't store any data. It's the query of view which is going to execute each time when we use view.
+On the other hand, If we create table using CTAS, Again here also we have a query attached to the object to the table but here what happens is Database Engine has to execute the query  in order to understand the structure as well as the data that will be inserted inside the table. Here, once query is executed the result of the query is going to be inserted inside the table. So, this new table will be storing the result of the query.
+
+Once user select something from the VIEW, so DB Engine will go for executing the query of the view in order to fetch the data from the original table and then present it as a result for the end user.
+But on the other hand if user is selecting the table that is created using CTAS, what will happen is SQL Engine will not execute the CTAS Query again like in the case of VIEW, bcuz DB Engine already done that while creation of the table. So, that means we are not querying anything from the main table, we're simply fetching the data from the our new table. 
+So, Querying the View is slower than querying a CTAS table.
+
+Suppose we're doing data updates in original table, If the User using the VIEWs, so executing again the same query, so DB Engine will again execute the query of view in order to fetch data from the original table. So, we here users will get updated data in the VIEW.
+On the other hand if user is using table from CTAS, what will happen is the table has still having the old data. All those updates in original table will not be reflected in the table created by CTAS. Bcuz the table created using CTAS is now independet table from the original table.
+The only way to get the new updated data of original table into newly created table using CTAS is to re-execute the CTAS query.
+So, It is hard to maintain tables created using CTAS.
+
+
+| VIEWS                                      | CTAS Table                                 |
+|--------------------------------------------|---------------------------------------------|
+|The query of VIEW has not yet been executed | The query of CTAS has been executed already |
+|Querying Views is Slower than querying CTAS tables | Fast as this is a table              |
+|Views are Easy to Maintain                  | Tables are comparatively harder to maintain |  
+
+</details>
+<!-----------CTAS VS VIEWS-------------->
+<details>
+  <summary> <b>CTAS Syntax</b> </summary>
+
+**Syntax of Creating Table using ```CREATE/INSERT```** - Classical way
+```sql
+--DDL Statement
+CREATE TABLE table_name
+(
+ID  INT,
+Name VARCHAR(50)
+)
+
+--INSERT Statement
+INSERT INTO table_name
+VALUES(1, 'Rohit')
+```
+
+**Syntax of Creating Table using ```CREATE TABLE AS SELECT```** - CTAS Way
+```sql
+--DDL Statement
+CREATE TABLE table_name AS
+(
+   --Query
+   SELECT
+        col1,
+        col2
+   FROM table1
+   WHERE condition
+)
+
+-- This syntax is used in MySQL | Postgres | Oracle
+--But in SQL Server we have a shorted way
+
+SELECT
+    col1,
+    col2
+INTO table_name
+FROM table1
+WHERE condition
+```
+<!-------syntax of creating table using CTAS----------->
+</details>
 
 <details>
-  <summary> <b> </b> </summary>
+<summary> <b>Use cases of CTAS </b> </summary>
+
+### Use Case 1. Optimize Performance
+
+We have complex logic inside the data project.
+So, We use view in order to store those complex logic inside database so that our end users don't have to keep repeating the same logic over & over again. The results of view can be use from our users. So everything stay easy & friendly to consume for users.
+
+But what might happen is that the logic of VIEW could be very complicated & needs a lot of time to be executed from the database.
+If it is going to take 30 minutes then each users has to wait for 30 minutes until the query is executed, none of the users is going to happy with this situation.
+
+In this scenario, at max we can optimize the query but we can't do beyond that.
+
+So, Solution to this is we can switch the VIEW to CTAS table.
+Just by taking the same logic query into a CTAS so that the intermediate results are stored in a table.
+At the moment of creating the table, It will take 30 minutes. It will take long time bcuz It is the same query & the Database Engine need the time until creating the intermediate result.
+But big advantage of this is that once everything is prepared may be at a schedule time or in night, At mornings once all users are logged in and start querying the data, they have everything prepared.
+Now users can select the data & do analysis & reporting by using the tables created from CTAS.
+Response time will be fast for all users.
+
+So, If we have scenaio where we're using VIEWS and the there is performance Issue like response is slow.Then we can prepare the data from the same query by creating new tables using CTAS at a schedules time in the night.
+This happens in a lot of Data Projects where we have to decide instead of go with VIEWS go with Table from CTAS. 
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/f3d66bf7-b5cb-465f-8be7-9a52603e16af" />
+
+```python
+# Create a table using CTAS that shows total number of orders for each month.
+
+CREATE TABLE Sales.MonthlyOrders AS
+(
+     SELECT
+         DATENAME(month, order_date) AS month
+         COUNT(*) AS totalNumOfOrders
+     FROM Sales.orders
+     GROUP BY DATENAME(month, order_date)
+)
+
+
+SELECT
+      *
+FROM Sales.MonthlyOrders
+
+# OR in SQL Server
+     SELECT
+         DATENAME(month, order_date) AS month
+         COUNT(*) AS totalNumOfOrders
+     INTO Sales.MonthlyOrders
+     FROM Sales.orders
+     GROUP BY DATENAME(month, order_date)
+     # This will not show the results bcuz this is DDL statement not anymore a query. created table!
+
+SELECT * FROM Sales.MonthlyOrders
+```
+This table created using CTAS lives in database as long as we didn't drop bcuz it's a table where data is stored permanently.
+But if things change in the original table orders, this monthly orders will not be updated automatically like VIEWS.
+So, If you want to drop this table.
+```python
+ DROP TABLE Sales.MonthlyOrders
+```
+
+<details>
+<summary> How to refresh<b> CTAS ?</b> </summary>
+
+If we want to refresh the tables which are created from CTAS eveyday, so that get the fresh data inside the table.
+So, We can do that by first dropping the table & then again executing the same CTAS query.
+
+```python
+# To refresh the CTAS
+
+# Step 1. Dropping the table
+# Step 2. Execute the CTAS query again
+
+DROP TABLE Sales.MonthlyOrders;
+
+CREATE TABLE Sales.MonthlyOrders AS
+(
+     SELECT
+         DATENAME(month, order_date) AS month
+         COUNT(*) AS totalNumOfOrders
+     FROM Sales.orders
+     GROUP BY DATENAME(month, order_date)
+)
+
+# OR
+
+DROP TABLE IF EXISTS Sales.MonthlyOrders;
+CREATE TABLE Sales.MonthlyOrders AS
+(
+     SELECT
+         DATENAME(month, order_date) AS month
+         COUNT(*) AS totalNumOfOrders
+     FROM Sales.orders
+     GROUP BY DATENAME(month, order_date)
+)
+```
+If you want to do this in SQL Server in one go, then use T-SQL (Transaction SQL) which provide additional programming features like checks.
+```sql
+    --T-SQL
+    IF OBJECT_ID('Sales.MonthlyOrders', 'U') IS NOT NULL
+          DROP TABLE Sales.MonthlyOrders;
+    GO
+
+    SELECT
+         DATENAME(month, order_date) AS month
+         COUNT(*) AS totalNumOfOrders
+     INTO Sales.MonthlyOrders
+     FROM Sales.orders
+     GROUP BY DATENAME(month, order_date)
+```
+
+<!-------How to refresh CTAS?---------------->
+</details>
+
+
+### Use Case 2. Creating a Snapshot
+
+We use CTAS tables in order to create a persistent snapshot of the data at specific time in order to analyse the Data-Quality issue.
+
+In some scenario, we have tables and we're analysing the issues like Data Quality issue in our data. So, we're analysing why is this happens? 
+
+Problem : <br/>
+But problem here is at the same time there're updates going on this table as data is changing like in production table.
+So, everything is getting mixed up & we will not be able to analyse this & find the root cause of data quality issue.
+
+Solution : <br/>
+So, what we can do here is, we can create a fixed persisted snapshot of the data in a separate table using CTAS, It will make sure nothing is changing & we can do our Analysis on Data Quality issue.
+
+> This is why we use CTAS in projects to make sure we have snapshot of data to ensure our analysis are done on the same scenario that cause bug & so we use CTAS table as foundation to find the problem & fix it. 
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/adffcccf-d85e-413c-89d1-4b83bf20456a" />
+
+
+### Use Case 3. Physical Data Marts in Data Warehouse
+
+Physical Data Marts
+> Persisting the Data Marts of a Data Warehouse, improve the speed of data retrieval compared to using Views.
+
+- We can use CTAS in order to create our data mart to make it physical data mart instead of virtual data mart using views.
+
+As we learned before, If we have Data Warehouse system, our first layer i.e. **Data Warehouse layer** is going to store the data inside tables. but for the second layer i.e. **Data Mart**  we use views in order to have dynamic & flexible in order to generate multiple Data-Marts and we call it the Virtual layer.
+
+But Now, in some scenarios, If things get complicated like your Data Mart & Report is going to be slow bcuz there, for each action we're generating a query of Views. So PowerBI Reports & Dashboards are creating views queries in your data-marts. And Data Marts always have to go to the Data Warehouse in order to retrieve data for reports. This whole things take minutes or sometimes in hours.
+So, In this scenario, we can't stay using Views bcuz they're slowing everything down.
+
+But Instead of that we have to convert our Data Mart to a physical Layer. That means instead of using Views we have to use tables, and in order to generate tables of Data Marts on daily basis is to use CTAS query between Data Warehouse Layer and Data Mart Layer.
+It still may be take 30 minutes that's why we can go & prepare the data schedule at night but once data is loaded into the table, for PowerBI & Dashboard reporting the performance will be become better bcuz now we have tables instead of view. So response time will be better. There is no waste of time by waiting for data marts to get the data from data warehouse on each request.
+
+This is another usecase where we use CTAS where the views at the Data Marts are slow. So we replace it with tables using CTAS to speed up things.
+But recommendation is start first from the Views. So create virtual Data Mart using Views query bcuz implementation is very dynamic & rapid, and you're always getting fresh data from the Data Warehouse. 
+But may be later if you notice, some data marts & models are getting complex then replace few Data Marts from Views to Tables using CTAS.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/96b93504-9cdf-40de-86ba-184b35860a1d" />
+
+<!-------Use Case of CTAS---------------->
+</details>
+
+With that we have covered first type of tables that we have in database. The **Permanent Tables** where we create tables & they live forever until we drop them.
+Now we will see another type of tables in databases, we call them **Temporary Tables**.
+
+<!-------------------Temp Tables--------------------->
+## 9.5 Temp Tables - temporary Tables
+
+<details>
+  <summary> What are <b>Temporary Tables</b> ?</summary>
 
 </details>
 
