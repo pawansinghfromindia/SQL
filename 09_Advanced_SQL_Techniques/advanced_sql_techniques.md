@@ -2352,6 +2352,95 @@ Next we will learn about How to create table based on query? using Temporary tab
 <details>
   <summary> <b>CTAS & TEMP </b> </summary>
 
+  Before starting this directly, We have to go one by one step.
+</details>
+
+
+<details>
+  <summary> <b>Database Structure</b> <code>Server > Database > Schema > Table or View > Columns > Name & Datatype </code> </summary>
+
+Let's see again **Database Structure**. 
+
+In each **SQL Server**, there are multiple Databases. <br/>
+In each **Database**, there are multiple schemas. <br/>
+In each **Schema**, we define multiple **Objects** like **Tables and Views**. <br/>
+In each **Table**, we define columns & Keys <br/>
+Each **Column** has name & datatype <br/>
+Similarly In each **View**, we have columns. <br/>
+
+We use DDL(Data Definition Language) which is a set of SQL command in order to define database structure.
+```CREATE``` in order to define a new table <br/>
+```ALTER``` in order to update the structure <br/>
+```DROP``` in order to drop whole structure <br/>
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/88aba078-141c-4ab4-b85e-7ff5940cf255" />
+
+</details>
+
+<details>
+  <summary> <b>3-Level of Database Architecture</b> </summary>
+
+We have also seen the **3-Level of Database Architecture**
+1. Physical Level (Internal Layer) : DBA, Low abstraction,where DBA deals with Data Files, Partitions, Logs, Catalogs, Blocks, Caches
+2. Logical Level (Conceptual Layer) : Application Developers & Data Engineers, Less Abstraction, Defines Tables & Relationship between them, Views, Indices, Stored Procedures, Functions
+3. View Level (External Layer) : End Users, High Abstraction, where end users like Analyst use the data in order to do analysis & reporting
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/05ac4512-5a30-4d98-9522-8744b497f2ac" />
+
+</details>
+
+
+<details>
+  <summary> <b>What is a Table ?</b> </summary>
+
+### Table 
+> A table is a structured collection of data, similar to a spreadsheet or grid(Excel).
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/0336f1e5-1177-4ae0-b960-60065d5fa00d" />
+
+- A table has different columns, Each column represents **a field** of the data like Id, Name, Country
+- A table has multiple rows, Each row represents **a record** or **a entry** of the data. like 1, Rohit, India
+- The intersect between the row & column, we call it a **Cell**, Each cell is a single piece of data. like Row 1, Name = Rohit
+
+The whole Table is going to be stored physically in the database as **Database Files**. So, tables are in the database like multiple files that are holding information about the table. Those Database files are stored physically in the **Disk Storage** of database.
+
+Means, tables are not stored like spreadsheets/Excelsheets but they're stored in special database files that usual develeopers & End users don't have access to those files. So, Tables is a level of abstraction & it represents the actual data that're in the files.
+So, actually each time you're querying a table, Database Engine will go to those files & fetch the data.
+
+### Table Types : ```Permanent Tables```, ```Temporary Table```
+
+We have different types of tables in SQL.
+- We have tables that stays forever until drop them, we call it **Permanent Table**
+- Another type of tables is **Temporary Table**, these tables can be deleted & dropped once the session ends.
+
+**1. Permanent Table**
+There are 2 ways to create permanent tables :
+- Clasical Way : Where we create table from scratch and then insert the data into it, we call it ```CREATE/INSERT```.
+- CTAS way : Create Table As Select, It creates table but based on SQL query.
+
+**2. Temporary Table**
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/ccead2b0-7f9f-408a-91c5-7b085754d380" />
+
+</details>
+
+<details>
+  <summary> <b>Differences between <code>CREATE/INSERT</code> vs <code>CTAS</code> </b> </summary>
+
+```CREATE/INSERT``` method is classical way on how to define and create tables in SQL.
+1. Create | Define the structure of table.
+2. Insert | Insert the Data into the table.
+
+In Step 1, we have a DDL statement where we have ```CREATE TABLE table_name(col1 datatype, col2 datatype)``` command. Once, It is executed Database Engine will create a brand new empty table where we can hold our data. So, with that we have defined the structure of our table, but it is still an empty table. Next is
+
+In Step 2, we insert our data inside the new table using DML statement```INSERT INTO table_name VALUES(1, 'Rohit')```. So our data come from multiple sources like CSV file or another database in case of migration of data or may be we're inserting our data manually or might be coming from an application.
+Once, we execute insert, Data will be inserted into the newly created table.
+
+This new table with our data will be stored persisted permanently.
+
+```CTAS - CREATE TABLE AS SELECT```is another method to create a new table based on the result of a SQL query.
+
+
 </details>
 
 <!-------------------Temp Tables--------------------->
