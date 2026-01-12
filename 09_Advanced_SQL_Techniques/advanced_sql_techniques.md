@@ -2686,9 +2686,208 @@ Now we will see another type of tables in databases, we call them **Temporary Ta
 <details>
   <summary> What are <b>Temporary Tables</b> ?</summary>
 
+> Temporary table stores intermediate results in temporary storage within the database during the session. <br/>
+> The database will drop all temporary tables once the session ends.
+
+Temporary tables, Sometime we can them **Temp Tables** in shortcut. They store intermediated results in a temporary storage in a database during a session and the database automatically those these temporary tables after the session ends.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/460254e5-cbf7-4245-9106-f5458a66f41f" />
+
+We have learned CTAS, we could use a query in order to retrieve data from one table and put that intermediate results in brand new table in the database. <br/>
+The same thing is for Temporary tables we have a query that retrieve the data from a table & database will create a new brand table in the database that has structure & data from the result of the query. <br/>
+
+It seems both CTAS and Temp tables are exactly same. What is the difference then?
+- Yes, but Difference is about the life of the table.
+- Tables that are created using CTAS or CREATE/INSERT are going to stay permanently live in database until we drop them. SO, If System is completely offline the data stays in the database once system is online agian.
+- But the temporary tables is going to deleted and dropped from the database automatically once session ends. Session means Once you open the client and connect to the database and querying, we call the time between connecting ourself to the database and disconnecting from the database a **Session**
+- So, Once we close the client & disconnected from the database or may be shutdown your PC, what is going to happen is database will go and destroy & delete all the temporary tables that ar created during the session. So, the temporary tables live as long as we have a session, we can access temporary tables during the session time.
+
+> **Session** : The time between connecting to a database and disconnecting from the database is known as a session.
+
 </details>
 
-<!-----------------------CTAS----------------------->
+<details>
+  <summary><b> Syntax of Temp Tables</b> </summary>
+
+In SQL Server, put # before the table name to make it temporary table. 
+```python
+SELECT
+    column1,
+    column2
+INTO #new_tableName
+FROM table1
+WHERE condition
+```
+Q : Where do we find the temp tables? <br/>
+A : In Database > System Database > tempDB > Temporary Tables, Only DBA has access to System database where he manages all those stuffs. 
+
+```python
+# Creating a temp table from table orders
+
+#creating a temp table
+SELECT
+      *
+INTO #temp_orders
+FROM Sales.orders
+
+# accessing temp table
+SELECT
+     *
+FROM #temp_orders;
+
+DELETE
+FROM #temp_orders
+WHERE order_status = 'Delivered';
+
+SELECT
+     *
+FROM #temp_orders;
+
+```
+- So we can do anything like any manipulation in our temporary tables as we want.
+
+- In some analysis scenario, If you want to save the result of temp table so that you can access it later, just opposite of temp table concept. So you can store the result of temp table into normal permanent table.
+```python
+SELECT
+     *
+INTO Sales.ordersTest
+FROM #temp_orders;
+```
+- Step 1. Load the data to Temp table
+- Step 2. Transform Data in Temp table
+- Step 3. Load Temp table into a new Permanent table
+
+It's like a playground where you can do all of your testing & make mistakes in temporary tables.
+
+So, now if we end our session, now connect to database this is another session. So all the temp tables will lost bcuz database deleted & dropped those temp tables automatically once session ends. But the ordersTest permanent table we created still there.
+
+</details>
+
+<details>
+  <summary>How Database execute <b>TEMP Tables </b>? </summary>
+
+Let's see how database server execute the temp table script.
+- As a Data Analyst we create a query to create temp table.
+- Now, Database Engine will identify the query and execute, so here first get the data from table orders which is mentioned in the query and after that Database Engine has the result.
+- From here, 2 things happen,
+   - 1. DB Engine will store the metadata information in System Catalog.
+   - 2. DB Engine will create a table but this time not in USER data memory, rather in Temporary storage in the disk. So table will live for short time.
+- Now we can write multiple queries that're doing multiple analysis over that temp table.
+- So, each time you select something from temp table, DB Engine will go to the Temporary Storage in disk and fetch the data.
+- Once you're done with Analysis & you close your client the session between you & database will end and now DB Engine understand that there is no more connection to the user then it will clean up the temporary storage where the temp tables are stored. So basically It deletes & drops the temp tables.
+
+This is how Database Engine works with temporary tables.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/c7771407-6cc3-4ad8-af39-bde3c91864a6" />
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/6e1b1f53-3eb7-4232-a83f-df44bfedad1d" />
+</details>
+
+<details>
+  <summary><b> Use cases of Temp Tables</b> </summary>
+
+Why do we need TEMP tables? <br/>
+
+### Use Case 1. Intermediate Results
+
+Let's say in the source database we have a table called Orders.
+Now we would like to load the table in our data warehouse.
+We have to several transformation in order to prepare the data for analysis in the data warehouse.
+So, We have queries :
+- One query to remove duplicates
+- another query to handle the NULLs
+- another for filtering & Cleaning up
+- last is to Aggregate the data.
+Of course those queries i.e. Transformations want to change the content of the table Orders.
+And there is no scenario where we can do that directly on the source database table. As this is not allowed.
+That's why in Data Warehousing we have to go & get our own copy of the data and then on top of this data, we can do our Data Transformations.
+One way to do this is using TEMP tables.
+So, We have now scripts for transformation :
+- One script in order to EXTRACT the data from the table Orders and put in TEMP table as an intermediate result
+- Then other scripts of TRANSFORMATION and all those queries to remove duplicates, filtering, aggregation etc
+- They start manipulating and changing the data of this extra copy in the TEMP table.
+- Last step is LOADING, where we load the final version of intermediate results in the database.
+This is what we do whole ETL before inserting the data to database.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/ef372466-f03c-4096-8a1d-c28d870ab94e" />
+
+
+Now Orders table in source database and final table in the Data warehouse both of them are tables. So, they are permanent table and will stays there as long as we don't drop them.
+
+But Intermediate result, It is not important. It is just an intermediate step that we have done in order to have a extra copy of the data to manipulate it in order to prepare it to be inserted into Dataware house. So, after the loading the data into data warehouse, this copy of data is not anymore important. It shouldn't stay for a long time.
+That's why in this scenario we use TEMP tables instead of normal tables for the intermediate result.
+That's bcuz of only one advantage that Database will do automatic Clean up after the host session ends.
+So, We don't have to deal with dropping mechanism of the TEMP table for the next load.
+
+If there is something wrong in the data warehouse, we will always check the copy where the transformations are done in order to debug and find issues.
+So, Generally we don't use TEMP tables in all projects but TEMP tables make sense in some projects.
+
+We use TEMP tables in order to store intermediate Results temporarily until we are done with the session. Once session ends Database will automatically do clean up & drop temp tables.
+  
+</details>
+
+<details>
+  <summary> Opinions about TEMP Tables </summary>
+
+To be honest TEMP tables hardly used in any project.
+ - If we need an intermediate results in one query, then we use CTEs.
+ - If intermediate result is very important than we put it in either View or CTEs.
+
+But TEMP table is nice technique to learn, may be we can utilize it in the projects where there is a need to use TEMP tables.
+
+</details>
+
+<details>
+  <summary>Summary of <b>SQL Tables</b> </summary>
+
+**Tables** : Structured collection of Data in Columns & rows.
+- Tables in database are like spreadsheets/grids that contains columns & rows.
+- Our actual data is stored in the table (columns & rows)
+
+**Types of Table**
+- Permanent Tables : lives in the Database forever as long as we don't drop them.
+- Temporary Tables : lives only during the session database automatically drop them once session ends.
+
+**Methods to create tables in database**
+- ```CREATE/INSERT``` : this method involves 2 steps
+  - Defining structure & creating the table. ```CREATE```
+  - Inserting the data inside newly created table. ```INSERT```
+    
+- ```CTAS - CREATE TABLE AS SELECT``` : this method also create brand new table  but based on the result of a query.
+  - It is done in one step but always need another table.
+
+**Difference between CTAS Tables & Views** : We use CTAS tables instead of Views if the logic of the view is very complex & takes a lot of time to be executed in the database.
+
+**CTAS Use Cases**
+- Optimize Performance : Persist Complex SQL logic in table
+- Creating Snapshot of data in order to analyse a bug or data quality issues, to ensure exact data in order to find the solution of bug & issue.
+- We use TEMP tables in order to store intermediate results in temporary storage.
+
+**Advantage of TEMP Tables**
+- Automatic cleanup of data after session ends.
+
+</details>
+
+<!-----------------------Temp Tables----------------------->
+
+### Comparison of Subquery vs CTE vs View vs CTAS vs Temp
+
+So, We have learned that in real data projects, if you have a database, there will be a lot of Analytical use cases where Data Analyst want to access your data and do analytics. They write complex queries for their complex analysis.
+If you don't do anything about this, you will face a lot of challenges like complexity & a lot of redundancy of the same complex logic but from multiple users and may be performance and security issues.
+
+We have learned 5 amazing techniques in order to solve those problems. like Subqueries and CTEs and how to create objects like Views, CTAS and Temporary tables.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/5f2d77b3-0fc4-4ae0-ac10-6b5d70db48ad" />
+
+Let's compare all those 5 techniques in order to have a overall picture of pros & cons:
+
+
+
+<details>
+  <summary><b> </b> </summary>
+
+
+</details>
 
 <!-----------Chapter 9. Advanced SQL Techniques--------------->
 
