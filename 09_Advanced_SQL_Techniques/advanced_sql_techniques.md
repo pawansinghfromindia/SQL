@@ -2875,21 +2875,53 @@ But TEMP table is nice technique to learn, may be we can utilize it in the proje
 So, We have learned that in real data projects, if you have a database, there will be a lot of Analytical use cases where Data Analyst want to access your data and do analytics. They write complex queries for their complex analysis.
 If you don't do anything about this, you will face a lot of challenges like complexity & a lot of redundancy of the same complex logic but from multiple users and may be performance and security issues.
 
+<details>
+  <summary>5 SQL Advanced Techniques <b> <code>Views, CTEs, Subqueries, CTAS and TEMP tables</code> </b> </summary>
 We have learned 5 amazing techniques in order to solve those problems. like Subqueries and CTEs and how to create objects like Views, CTAS and Temporary tables.
 
 <img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/5f2d77b3-0fc4-4ae0-ac10-6b5d70db48ad" />
 
 Let's compare all those 5 techniques in order to have a overall picture of pros & cons:
 
+|              | Subquery                  |  CTE                             |   TEMP         |  CTAS      | VIEW        |
+|--------------|---------------------------|----------------------------------|----------------|------------|-------------|
+| Storage Type |Cache Memory               | Cache Memory                     | Disk           |  Disk      | No storage  |
+| Life Time    | Temporary                 | Temporary                        | Temporary      | Permanent  | Permanent   |
+| When Deleted | End of Query              | End of Query                     | End of Session | Until DROP | Until DROP  |
+| Query Scope  | Single Query              | Single Query                     | Multi-Query    | Multi-Query| Multi-Query |
+| Resuability  | Limited 1 place - 1 Query | Limited but 1 Query Multi-places | Medium, Multi-queries but only during session | High Multiple users, Multi Queries |
+| Data Up2date | Yes                       | Yes                              |  No            | No         | Yes         |
 
-
-<details>
-  <summary><b> </b> </summary>
-
+Rank those SQL techniques based on your experience in data project :
+``` Views > CTEs > Subqueries > CTAS > TEMP tables```
 
 </details>
 
+<details>
+  <summary><b>A big picture of How things work in SQL big project ? </b> </summary>
+
+So, We have a database. 
+- Things start where a DBA or Data Engineer creating a new table from scratch by writing a DDL statement in order to create one physical table inside our database.
+- Now at this time newly created table is empty. So, write another query insert statement in order to insert/fill data into new table.
+- Once we have table with data, we are going to give access to Data Analysts in order to do anaylysis so he/she starts writing queries.
+- One thing that could happen is might be logic is complex and data analyst to do in 2 steps.
+Step one is a query that prepares the data in order to execute the second step.
+That's where Data Analyst uses ***Sub-queries*** and the main query will retrieve the data from intermediate result in order to prepare the final result for the analysis.
+- Now what could happen is there will be SQL logic in the query where it keep repeating in the scripts. So, now instaed of writing another Sub-query for that Data Analyst can put this SQL logic in ***CTE query***. and now he/she can use the result of CTE in multiple places in the same query.
+- So, all those stuffs Subquery, CTE query and main query happens at one single query.
+
+- Now what could happen, Data Analyst write an amazing code. So, instead of using it only in the single query, persist this amazing logic code in the database. So data analyst can put that in a ***View*** in the database so that all other users and other analysts can benefits from this logic. They don't have to write it again. they simply go and query the View which makes their life easier. and of course the Data Analyst himself/herself can use this view in his main query.
+-  Now, Data Analyst has another logic that is really complex and huge, and logic is beneficial for everyone and all of them use it very frequently. So, as this logic is in View so the response is very slow, so everyone has to wait for 30 minutes. So, here performance issue. Here, Data Analyst has to decide - Do he/she need to put this logic inside the View or inside the CTAS table?
+So, ofcourse the performance of ***CTAS table*** is way better than View. So using CTAS data anlyst generates a physical table so that all other data analysts and other users can access this new table in order to reuse this result with better performance.
+
+ This is how things works in real world data projects.
+ It is not simple select query on table. There we have to deal with Subqueries,CTEs, Views, CTAS tables and TEMP tables for different purposes.  
+
+</details>
 <!-----------Chapter 9. Advanced SQL Techniques--------------->
+
+Here, We have learned all the techniques on How to organize our complex project.
+Next we will learn something that is compelely different than what we have learned so far i.e. **Stored Procedure** on How to put our code inside the database. This is all about programming in SQL like How to add stuffs like variables, parameters, error handlings and so on. 
 
 [< Aggregation & Analytical Function](https://github.com/pawansinghfromindia/SQL/blob/main/08_Aggregation_and_Analytical__Functions/aggregation_and_analytical_functions.md) |
 Advanced SQL Techniques | [Performance Optimization >]()
