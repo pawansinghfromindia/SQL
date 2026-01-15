@@ -2918,10 +2918,352 @@ So, ofcourse the performance of ***CTAS table*** is way better than View. So usi
  It is not simple select query on table. There we have to deal with Subqueries,CTEs, Views, CTAS tables and TEMP tables for different purposes.  
 
 </details>
-<!-----------Chapter 9. Advanced SQL Techniques--------------->
 
 Here, We have learned all the techniques on How to organize our complex project.
 Next we will learn something that is compelely different than what we have learned so far i.e. **Stored Procedure** on How to put our code inside the database. This is all about programming in SQL like How to add stuffs like variables, parameters, error handlings and so on. 
 
+<!-----------Temporary table--------------->
+
+## 9.6 - Stored Procedure
+
+<details>
+  <summary>What is <b> Stored Procedure</b> ?  </summary>
+We have learned how to organized our complex projects using the advanced techniques like Subqueries, CTEs, Views, CTAS and Temp tables.
+Now, here we will learn Stored Procedure on how to put our code inside the database which is all programming in SQL like variables, parameters, error handling.
+
+We have 2 sides, Server and Clients.
+We have database and as a user we write SQL Query to retrieve/inserting/updating data from/to/on the database.
+Now this process done by users not only one single time,but it is keep repeating same steps over & over. Basically we are keep repating day after day.
+Now, suppose you're going on vacation, so what will you do? You handover all those queries (SELECT, INSERT, UPDATE) to your collegues and they will do it.
+- So, basically you give them SQL query script and told them run this query first and then that query at the end.
+- But this is not a good way to how to do things bcuz might be there can an error in script or sequence of query order etc etc Things can go wrong. That's exactly why we have **Stored Procedure** in SQL.
+- So, What we will do we put all SQL statements together in one frame in program and we call it **Stored Procedure**
+- Once, we do that all our SQL statements not stay at the client side they will be stored in ther server-side of the database.
+- That means, In stored procedures we're storing our SQL statements inside the database. So, we don't have to handover our SQL queries to collegues. All what we have to do in order to interact with SQL statements is to go & execute the Stored Procedure. So, we write a very simple command called ```Execute Stored Procedure```. means you're calling your stored procedures stored inside the server and once you execute this database will go to the stored procedure and start executing all the SQL statements that are inside the Stored Procedure and exactly in same sequence in which statements are there fom Too to Bottom.
+- Once database engine went to all of our SQL statements, it is going to return back the results to the users.
+- With that things are very easy and we can simply tell our collegues just to execute this stored procedure and rest can be done from the database.
+- With that we minimize the Human errors and make sure everything can be executed.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/bf9c3dbc-1f18-4827-8e0a-bbd8214a77dc" />
+
+This is what we mean by stored procedure, We can store multiple SQL statements in specific order in a stored procedure and save it inside the database(server), each time you need to run your SQL statements, you can simply execute the stored prodecure.
+
+</details>
+
+
+<details>
+  <summary> <b>Query vs Stored Procedure </b>  </summary>
+
+**Query** :  
+- One time request, It's a simple query
+
+**Stored Procedure** :
+-Multiple time requests, like build logic for loops, control flow, parameters, variables to make code dynamic & flexible and error handling in our code in order to handle issues.
+-Collection of queries i.e. Program Here complicated logic to do more stuffs like Programming & Coding, more advanced than just having a query
+
+> So, If we're working with Stored Procedures things are going to get more complicated and advanced but of course we will get a lot of flexibility and resusability compared to a simple query.
+
+</details>
+
+<details>
+  <summary> <b> Stored Procedure vs Coding in Python</b>  </summary>
+
+There is another alternative to stored procedures that is we can put all SQL statements in a python code and things will work.
+So, either we can put our SQL Statements is stored procedures or we can put it in a python code.
+
+What are the differences between using Stored Procedure or Python code to run SQL statements logic? <br/>
+**Few Disadavantages of python**
+- A disadvantage if you're having Python on different server bcuz we have to build a connection between your server and database server.
+Connection means Networking and you will get slightly worse performance compared to Stored Prodecure.
+
+- All the SQL Scripts that we store inside the stored procedure in the database is going to be pre-compiled(means, SQL server knows already about SQL statements i.e already syntax checks & database just have to prepare the data to execute the Stored procedure.) Basically SQL scripts in Stored procedure is very closed to the database and database knows everything about your sql scripts and it is ready to be executed.
+- If we put all of SQL Statements outside the database, then there is no chance for database to understand the query, checks syntax and prepare the data from table. So It can't compile anything until Python sends the code to Database.
+
+**A lot of Advantages of using Python**
+- We can build very flexible, dynamic and resuable python code where we can use python features together with SQL which opens the door for many possibilties.
+- We can make great version control. So here everything is integrated in Python tools
+- If we have a complex requirement in our project. It's going to really hard to implement it in Stored Procedures. It costs a lot of lines codes and things are not going to be comfortable. But if we're implementing the complex logic in python, things will be way easier 
+
+> So, with python we can implement very complex logic very easily compared to Stored procedure.
+
+</details>
+
+<details>
+  <summary> Being Honest on Stored Procedures! </summary>
+
+> **Don't build Data Projects using Stored Procedures**
+
+If you're working on a data project, It is never recommended to use Stored Procedure if you gave possibility to have your code in python. That's bcuz a lot of projects using stored procedures and most of them ends in chaos. It is really hard to debug or test. It's like a catastrophic especially for a big data project where you have a lot of data and tables.
+
+We can manage huge data projects in Python. Especially platform like **Databricks** or **Snowflakes**.
+So, the best way to control your data is using Python.
+
+But if you have no possibility to have Python server, you only have a database server and you can only work with your database then you don't have any other option in that case you have to work with Stored Procedures.
+
+> If you're working on a big project then never use Stored Procedure,Go use python. But if you have small projects few tables then it's fine to stay with Stored Procedure.
+
+</details>
+
+<details>
+<summary> <b>Stored Procedure Basics </b> </summary>
+
+**Syntax of Stored Procedure**: <br/>
+It has always 2 parts :
+1. Definition of Stored Procedure
+2. Execution of Stored Procedure
+
+Stored Procedure Definition : ```CREATE PROCEDURE procedure_name AS BEGIN ( ) END```
+```python
+CREATE PROCEDURE procedure_name AS
+BEGIN
+
+#SQL Statements Write here
+
+END
+```
+Stored Procedure Execution (Call) : ```EXEC procedure_name```
+```python
+EXEC procedure_name
+```
+
+```python
+# Step 1. : Write a query
+# For USA Customers Find the total number of customers and the average score.
+
+SELECT
+    COUNT(*) AS totalCustomers,
+    AVG(score) AS avgScore
+FROM Sales.customers
+WHERE country = 'USA'
+
+# Now we have to present this report over & over So we have to execute this query frequently on weekly basis in order to get data for the report.
+# This means we have to save this query in order to use it later otherwise each time we have to write it.
+# So, Storing the SQL query text somewhere so that we don't  have to re-write it over and over.
+# Normally We save this query in text file and put in one folder and whenever we need it we take it from there & use it.
+# Well. We don't have to do that we have Stored Procedure.
+
+# Step 2. : Turning the Query into a Stored Procedure
+
+CREATE PROCEDURE GetCustSummaryProcedure AS
+BEGIN
+
+    SELECT
+        COUNT(*) AS totalCustomers,
+       AVG(score) AS avgScore
+    FROM Sales.customers
+    WHERE country = 'USA';
+
+END
+
+# To see the Stored Procedure, we can go to the Object Explorer > Sales Database > Programmability > Functions | Triggers | Stored Procedures
+# Stored Procedures > stored procedure1
+
+# Step 3. : Execute(Call) the stored procedure 
+
+EXEC GetCustSummaryProcedure;
+```
+
+> So, In future we don't have to store the whole query somewhere and copy paste it. Now just have to Execute the Stored Procedure and get the data.
+
+</details>
+
+<details>
+  <summary>  Stored Procedure : <b>Parameters</b> </summary>
+
+**Parameters** 
+> **It is a placeholder where we can pass value as input from the caller to the procedure, allowing dynamic data to be processed.**
+
+> Parameters pass values into stored procedure or return values back to the caller.
+
+```python
+# Creating a stored procedure
+# For German Customers Find the total number of customers and the average score.
+
+CREATE PROCEDURE GetCustSummaryProcedure2 AS
+BEGIN
+
+    SELECT
+        COUNT(*) AS totalCustomers,
+       AVG(score) AS avgScore
+    FROM Sales.customers
+    WHERE country = 'Germany';
+END
+
+EXEC GetCustSummaryProcedure2
+```
+So, We have created a stored procedure similar to this which is doing the same job but just for different country, So It doesn't make sense to create multiple Stored Procedure for the same logic. So We create a  parameterised Stored procedure to make dynamic, flexible and more re-usable.
+
+Here, We're voilating the DRY principle **AVOID REPETITION**. <br/>
+If you notice repeating code in your project. It's a sign that your code can be improved.
+Repeating stuffs in coding is bad thing.
+
+Parameterised Stored Procedure : ```ALTER PROCEDURE procedure_name @column_name datatype AS BEGIN () END```
+```python
+# Parameterised Stored Procedure
+
+# STEP 1. Define the parameter using @ by looking at @_nameOfparameter datatype with this SQL understand oh we're here using parameter
+# STEP 2. Use the parameter in SQL Query
+
+# Redefine stored procedure
+ALTER PROCEDURE GetCustSummaryProcedure @country NVARCHAR(50) AS
+BEGIN
+
+    SELECT
+        @country
+        COUNT(*) AS totalCustomers,
+        AVG(score) AS avgScore
+    FROM Sales.customers
+    GROUP BY @country
+    WHERE country = @country;
+END
+
+# STEP 3 : Pass the parameter's value at the Execution 
+
+# Execute the stored procedure
+EXEC GetCustSummaryProcedure @country = 'USA';
+EXEC GetCustSummaryProcedure @country = 'Germany';
+
+DROP PROCEDURE GetCustSummaryProcedure;
+```
+We can also add default parameter to Stored Procedure. ```ALTER PROCEDURE procedure_name @column_name datatype = 'default_value' AS BEGIN () END```
+```python
+# Set Default value to the parameterised Stored Procedure
+
+ALTER PROCEDURE GetCustSummaryProcedure @country NVARCHAR(50) = 'USA' AS
+BEGIN
+
+    SELECT
+        @country
+        COUNT(*) AS totalCustomers,
+        AVG(score) AS avgScore
+    FROM Sales.customers
+    GROUP BY @country
+    WHERE country = @country;
+END;
+
+# Execute the stored procedure with parameter value and without parameter value
+
+EXEC GetCustSummaryProcedure @country = 'Germany';
+
+EXEC GetCustSummaryProcedure;
+
+```
+
+</details>
+
+<details>
+  <summary> Stored Procedure : <b> Multiple Statements </b> </summary>
+
+We can have multiple SQL statements in one Stored Procedure.
+```python
+## Creating Stored Procedures with multiple SQL statements
+
+# STEP 1. DEFINE THE STORED PROCEDURE
+
+ALTER PROCEDURE GetCustSummaryProcedure @country NVARCHAR(50) = 'USA' AS
+BEGIN
+
+    # For USA Customers Find the total number of customers and the average score.
+    SELECT
+        @country
+        COUNT(*) AS totalCustomers,
+        AVG(score) AS avgScore
+    FROM Sales.customers
+    GROUP BY @country
+    WHERE country = @country;
+
+   # Find the total number of orders and total sales.
+    SELECT
+        COUNT(order_id) AS totalNumOfOrders,
+        SUM(sales) AS totalSales
+    FROM Sales.orders o
+    JOIN Sales.customers c
+    ON o.customer_id = c.cutomer_id
+    WHERE c.country = @country;
+
+END;
+
+STEP 2. EXECUTE THE STORED PROCEDURED
+
+EXEC GetCustSummaryProcedure @country = 'Germany';
+EXEC GetCustSummaryProcedure;
+```
+
+> TIP : Add a semicolon at the end of each SQL Statement, it makes easier to understand where is the end of the query and SQL also run next query in case of you have multiple query in the sequence.
+
+So, in this way SQL executes the Stored Procedure now we can use any query inside the Stored Procedures like SELECT, INSERT, UPDATE, DELETE and SQL will execute it from Top to Bottom.
+
+</details>
+
+<details>
+  <summary>  Stored Procedure : <b> Variables </b> </summary>
+
+**Variable**
+> It is a placeholder used to store a value to be used later in the procedure.
+
+It's not parameter, which pass values into a stored procedure or return values back to the caller.
+Variables temporarily store and manipulate data during its execution.
+
+```python
+# Total customers from the Germany, result : 2
+# Average Scores from the Germany, result  : 425
+# So, In result we don't want as table we want it as value simply.
+# in order to do that we use T-SQL (Transactional SQL) in order to give a message after executing the Stored Preocedure.
+
+# STEP 1. Declare Variables
+# STEP 2. Assign values to variables
+# STEP 3. Use Variables
+
+CREATE PROCEDURE getCustSummary @country NVARCHAR = 'USA' AS
+BEGIN
+DECLARE @totalCustomers INT, @avgScore FLOAT;
+
+SELECT
+     @totalCustomers = COUNT(*),  --query doesn't return any result, It will assign the result into variable
+     @avgScore = AVG(score)
+FROM Sales.customers
+WHERE country = @country;
+
+PRINT 'Total Customers from ' + @country + ':' + CAST(@totalCustomers AS NVARCHAR);
+PRINT 'Average Score from ' + @country + ':' + CAST(@avgScore AS NVARCHAR);
+
+SELECT
+   COUNT(order_id) AS totalOrders,
+   SUM(sales) AS totalSales
+FROM Sales.orders o
+JOIN Sales.customers c
+ON o.customer_id = c.customer_id
+WHERE c.country = @country
+
+END;
+
+# Execution of Stored Procedure
+
+EXEC getCustSummary;
+# Here we get only one result of the second query
+# First query doesn't return any result bcuz there we're printing.
+# So, If you go and see the messages besider the Result tab in your termal
+# you will see the message printed by the first query.
+
+
+EXEC getCustSummary @country = 'Germany';
+```
+
+</details>
+
+<details>
+  <summary> Stored Procedure : <b> Control Flow <code>IF ELSE </code> </b></summary>
+
+How to control flow in Stored Procedure? <br/>
+- Suppose If we're doing average and if we check the data we have NULLs
+> Handling NULLs : Handle NULLs before aggregation to ensure accuarate Result.
+> - So, usually we have to clean up our data before doing aggregation bcuz NULLs are considered as bad.
+> - So, In this scenario we have to consider NULL as 0.
+
+</details>
+
+<!-----------Stored Procedure--------------->
+
+<!-----------Chapter 9. Advanced SQL Techniques--------------->
 [< Aggregation & Analytical Function](https://github.com/pawansinghfromindia/SQL/blob/main/08_Aggregation_and_Analytical__Functions/aggregation_and_analytical_functions.md) |
 Advanced SQL Techniques | [Performance Optimization >]()
