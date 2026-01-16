@@ -2963,6 +2963,9 @@ This is what we mean by stored procedure, We can store multiple SQL statements i
 
 > So, If we're working with Stored Procedures things are going to get more complicated and advanced but of course we will get a lot of flexibility and resusability compared to a simple query.
 
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/5835d173-7e01-454b-aa3e-41e4626f29d8" />
+
+
 </details>
 
 <details>
@@ -2985,6 +2988,9 @@ Connection means Networking and you will get slightly worse performance compared
 - If we have a complex requirement in our project. It's going to really hard to implement it in Stored Procedures. It costs a lot of lines codes and things are not going to be comfortable. But if we're implementing the complex logic in python, things will be way easier 
 
 > So, with python we can implement very complex logic very easily compared to Stored procedure.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/8cb3265f-456a-4b06-abcb-c757694f3f2e" />
+
 
 </details>
 
@@ -3236,7 +3242,7 @@ ON o.customer_id = c.customer_id
 WHERE c.country = @country
 
 END;
-
+GO
 # Execution of Stored Procedure
 
 EXEC getCustSummary;
@@ -3260,9 +3266,398 @@ How to control flow in Stored Procedure? <br/>
 > - So, usually we have to clean up our data before doing aggregation bcuz NULLs are considered as bad.
 > - So, In this scenario we have to consider NULL as 0.
 
+Control Flow
+```
+Start
+|
+is Value Null? ----no-----> End
+|
+yes
+|
+Update it to Zero
+|
+End
+```
+Syntax of IF ELSE ```IF BEGIN --------- END ELSE BEGIN --------- END```
+
+```python
+# Altering a already created Stored Procedure
+ALTER PROCEDURE getCustSummary @country NVARCHAR(50) = 'USA' AS
+BEGIN
+# Declaring Variables to store data
+DECLARE @totalCustomers INT, @avgScore FLOAT;
+
+# Prepare Cleanup Data using IF-ELSE
+
+IF EXISTS (SELECT 1 FROM Sales.customers WHERE score IS NULL AND country = @country)
+BEGIN
+    PRINT('Updating NULLs score to 0');
+    UPDATE Sales.Customers
+    SET score = 0
+    WHERE score IS NULL AND country = @country;
+END
+ELSE
+BEGIN
+    PRINT('No NULL scores found')
+END;
+
+# Generating Reports
+SELECT
+     @totalCustomers = COUNT(*),
+     @avgScore = AVG(score)
+FROM Sales.customers
+WHERE country = @country;
+
+PRINT 'Total Customers from '+ @country + ':' + CAST(@totalCustomers AS NVARCHAR);
+PRINT 'Average Sale from '+ @country + ':' + CAST(@avgScore AS NVARCHAR);
+
+SELECT
+    COUNT(order_id) AS totalNumOfOrders,
+    SUM(sales) AS totalSales
+FROM Sales.orders o
+JOIN Sales.customers c
+ON o.customer_id = c.customer_id
+WHERE c.country = @country
+
+END
+GO
+
+# Execution of the Stored Procedure
+EXEC getCustSummary;
+EXEC getCustSummary @country = 'Germany';
+```
 </details>
 
-<!-----------Stored Procedure--------------->
+<details>
+  <summary>Stored Procedure <b>Error Handling <code> TRY CATCH </code> </b> </summary>
+
+Error Handling is essential thing to do while programming bcuz It gives us the control on what is going to happen when we have an error.
+- While getting error we can do a lot of things like printing messages, may be deleting/updating data, logging etc etc.
+- So, Basically we have full control on what to do if an error occured.
+- Of course we can do that in stored procedure.
+
+**Error Handling** usually has 2 parts :
+1. **TRY**
+2. **CATCH**
+
+```sql
+BEGIN TRY
+--SQL statements that might cause error
+END TRY
+BEGIN CATCH
+--SQL statemenrs to handle the Error
+END CATCH
+```
+
+So, CATCH is like a backup plan if something went wrong in TRY then only go to CATCH
+```
+Start
+|
+Execute TRY
+|
+if any Error ? ----no----> End
+|
+yes
+|
+Execute CATCH
+|
+End
+```
+
+```python
+# Altering a alredy created Stored Procedure
+ALTER PROCEDURE getCustSummary @country NVARCHAR(50) = 'USA' AS
+BEGIN
+  BEGIN TRY
+  # Declaring Variables to store data
+  DECLARE @totalCustomers INT, @avgScore FLOAT;
+  
+  # Prepare Cleanup Data using IF-ELSE
+  
+  IF EXISTS (SELECT 1 FROM Sales.customers WHERE score IS NULL AND country = @country)
+  BEGIN
+      PRINT('Updating NULLs score to 0');
+      UPDATE Sales.Customers
+      SET score = 0
+      WHERE score IS NULL AND country = @country;
+  END
+  ELSE
+  BEGIN
+      PRINT('No NULL scores found')
+  END;
+  
+  # Generating Reports
+  SELECT
+       @totalCustomers = COUNT(*),
+       @avgScore = AVG(score)
+  FROM Sales.customers
+  WHERE country = @country;
+  
+  PRINT 'Total Customers from '+ @country + ':' + CAST(@totalCustomers AS NVARCHAR);
+  PRINT 'Average Sale from '+ @country + ':' + CAST(@avgScore AS NVARCHAR);
+  
+  SELECT
+      COUNT(order_id) AS totalNumOfOrders,
+      SUM(sales) AS totalSales,
+      1/0  # adding error in our code, It throws Division By Zero error
+  FROM Sales.orders o
+  JOIN Sales.customers c
+  ON o.customer_id = c.customer_id
+  WHERE c.country = @country
+  
+  END TRY
+  BEGIN CATCH
+    PRINT('An error occured');
+    PRINT('Error Message :' + ERROR_MESSAGE());
+    PRINT('Error Number :' + CAST(ERROR_NUMBER() AS NVARCHAR));
+    PRINT('Error Line :' + CAST(ERROR_LINE() AS NVARCHAR));
+    PRINT('Error Procedure Name :' + ERROR_PROCEDURE());
+  END CATCH
+  END
+  GO
+  
+  # Execution of the Stored Procedure
+  EXEC getCustSummary;
+  EXEC getCustSummary @country = 'Germany';
+  ```
+  </details>
+  
+  <details>
+    <summary>Stored Procedure <b>Styling</b> </summary>
+  
+> Style Tip : Use ```tab``` inside  BEGIN and END blocks.
+- select the text + hit ```tab```. 
+- Put comments as description of step which explains what is the query doing.
+
+```python
+  # Altering a already created Stored Procedure
+  ALTER PROCEDURE getCustSummary @country NVARCHAR(50) = 'USA' AS
+  BEGIN
+    BEGIN TRY
+    ##Declaring Variables to store data
+    DECLARE @totalCustomers INT, @avgScore FLOAT;
+
+    #============================================
+    #Step 1. Prepare & Cleanup Data using IF-ELSE
+    #============================================
+    
+    IF EXISTS (SELECT 1 FROM Sales.customers WHERE score IS NULL AND country = @country)
+    BEGIN
+        PRINT('Updating NULLs score to 0');
+        UPDATE Sales.Customers
+        SET score = 0
+        WHERE score IS NULL AND country = @country;
+    END
+    ELSE
+    BEGIN
+        PRINT('No NULL scores found')
+    END;
+    
+    #====================================
+    # Step 2. Generating Summary Reports
+    #====================================
+    # Calculate Total Num of Customers and average score for specific country
+    SELECT
+         @totalCustomers = COUNT(*),
+         @avgScore = AVG(score)
+    FROM Sales.customers
+    WHERE country = @country;
+    
+    PRINT 'Total Customers from '+ @country + ':' + CAST(@totalCustomers AS NVARCHAR);
+    PRINT 'Average Sale from '+ @country + ':' + CAST(@avgScore AS NVARCHAR);
+
+    # Calculate Total num of orders and Total Sales for a scpecific  country
+    SELECT
+        COUNT(order_id) AS totalNumOfOrders,
+        SUM(sales) AS totalSales,
+        1/0  # adding error in our code, It throws Division By Zero error
+    FROM Sales.orders o
+    JOIN Sales.customers c
+    ON o.customer_id = c.customer_id
+    WHERE c.country = @country
+    
+    END TRY
+    BEGIN CATCH
+      #=========================
+      # Error Handling
+      #=========================
+      PRINT('An error occured');
+      PRINT('Error Message :' + ERROR_MESSAGE());
+      PRINT('Error Number :' + CAST(ERROR_NUMBER() AS NVARCHAR));
+      PRINT('Error Line :' + CAST(ERROR_LINE() AS NVARCHAR));
+      PRINT('Error Procedure Name :' + ERROR_PROCEDURE());
+    END CATCH
+END
+GO
+# Execution of the Stored Procedure
+EXEC getCustSummary;
+EXEC getCustSummary @country = 'Germany';
+```
+
+</details>
+That's all about Stored Procedure. It is an amazing feature in SQL to add programming ability in SQL.
+Next we will see Triggers.
+<!---------------Stored Procedure-------------------->
+
+## 9.7 - Triggers
+
+We have seen that we can put all of our SQL statements in stored procedure and then manually execute the stored procedure and then get the data in the stored procedure.That means in order to trigger the Stored procedure we have to manually go to the Stored Procedure & execute it in order to get the data.
+
+This is a problem, Can't we do that automatically. <br/>
+Here, comes the **Triggers**
+
+<details>
+  <summary><b>TRIGGERS</b> </summary>
+
+> **Trigger** in SQL is a special ***Stored Procedure*** (set of statements) that could automatically runs/fires in response to a specific event on a table or view. 
+
+Let's say we have a table in our database.
+
+- Now something happens to that table like inserting/deleting/updating data. All theses stuffs happens on the table we call them **Events**.
+- Now what we can do is attach a **trigger** on top the table and each time an event happens like insert/update/delete Something else is going to be trigger like ***inserting data somewhere else in another table*** or ***doing a check whether we're allowed to delete the data*** in first place or may be ***sending warning message***.
+
+So based on any changes in the table, we can trigger another event like insert/update/delete. And we can do this using SQL **Triggers**.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/51c59ae8-d5fb-4192-be3f-6e60f9276489" />
+
+
+There are different types of trigger :
+  
+</details>
+
+<details>
+  <summary><b>Trigger Types </b> </summary>
+
+1. **DML Triggers** : This type of triggers is going to respond once we have ```INSERT```, ```UPDATE```, ```DELETE``` statements happens on any table/view.
+    - **```AFTER```** : runs after the event
+    - **```INSTEAD OF```** : It can't wait to everyhing to happens, runs during the event. 
+2. **DDL Triggers** : This type of triggers is going to repond once any ```SCHEMA``` changes like ```CREATE```, ```ALTER```, ```DROP``` statements happens on any table/view.
+3. **Loggon Triggers** : This type of triggers is going to repond to any login events happens.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/5ca70c01-13ef-4f1a-abd2-2c0774b90c6d" />
+
+</details>
+
+<details>
+  <summary><b> DML Triggers </b> </summary>
+
+</details>
+
+<details>
+  <summary><b>Loggong Triggers </b> </summary>
+
+### Use cases of Triggers Loggon
+
+This usecase is about maintaining a audit logs. <br/>
+What do mean by Audit Logs? <br/>
+Let's say we have a table **employees**. The employee data is usually very sensitive information bcuz there we can see which emp is added, salary updated, emp terminations. This makes table very important bcuz we have to track all those changes that is happening to this sensitive table.
+- So, each time we're inserting, updating or deleting. We have to maintain a log about all those changes in order to analyse it later.
+- Such a log is very important for Compliances and Auditors.
+- If there is a problem, we can go through the logs to understand when this happened, who made this changes and what exactly changed.
+- Now in order to maintain logs, we use the power of Triggers.
+- What we will do is attach a Trigger on the table employees and each time we insert a new data to employees, we're triggering another events. So, What will going to happen is this employee is going to be inserted in the audit logs in order to have a record about this activity in the logs.
+- So, that means each time we inserting data to the table employees, you're automatically inserting data inside the logs.
+
+This is really amazing use case for the Triggers.
+
+| Id | Name  | Dept  | Salary |
+|----|-------|-------|--------|
+| 1  | John  | CSE   | 90K    |
+| 2  | David | AI/ML | 100K   |
+| 3  | Mike  | EC    | 70K    |
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/35e53a49-2ae6-4999-85e4-71a3170f4fa2" />
+
+</details>
+
+<details>
+  <summary><b>Syntax of Trigger </b> </summary>
+
+```sql
+   CREATE TRIGGER trigger_name ON table_name
+   AFTER INSERT, UPDATE, DELETE         --<---------when
+   AS
+   BEGIN
+       -- SQL statements write here    --<----------what
+   END;
+```
+
+**STEP 1. Create Log Table**
+```python
+CREATE TABLE Sales.employeesLogs (
+  log_id INT IDENTITY(1,1) PRIMARY KEY,
+  emp_id INT,
+  log_message VARCHAR(255),
+  log_date DATE
+)
+```
+**STEP 2. Create Trigger on Employees Table**
+```python
+CREATE TRIGGER trg_AfterInsertEmp ON Sales.employees
+AFTER INSERT
+AS
+BEGIN
+    INSERT INTO Sales.employeesLogs(emp_id, log_message, log_date)
+    SELECT
+          employee_id,
+          'New Employee Added =' + CAST( employee_id AS VARCHAR),
+          GETDATE()
+   FROM INSERTED
+END;
+```
+> **```INSERTED```** is like a special virtual table that holds a copy of the rows that are being inserted into the target table.
+> - Of course, ```INSERTED``` virtual table is only available during the execution of the trigger.
+> - So, We can't access or query this virtual table outside the trigger.
+
+If you want to see the Trigger, Go to Object Explorer > Database > Table on which you created trigger > there you find the folders like Columns | keys | Constraints, Triggers, Indexes, Statitics > Go to the Triggers folder > There you will find your triggers
+
+**STEP 3. Insert new data into Employees**
+```python
+# Let's 1st check our log table
+SELECT * FROM Sales.employeesLogs;
+
+INSERT INTO Sales.employees
+VALUES ( 6, 'Maria', 'HR', '2005-01-01', 'F', 50K, 3 );
+
+SELECT * FROM Sales.employeesLogs;
+
+INSERT INTO Sales.employees
+VALUES ( 7, 'Andre', 'VC', '2004-12-31', 'M', 100K, 3 );
+
+SELECT * FROM Sales.employeesLogs;
+```
+
+**employeesLogs**
+| log_id |emp_id |log_message             | log_date   |
+|--------|-------|------------------------|------------|
+|  1     | 6     | New Employee Added = 6 | 2026-11-30 |
+|  2     | 7     | New Employee Added = 7 | 2026-12-31 |
+
+</details>
+
+<details>
+  <summary> Read More about Triggers through  google search and AI assistance </summary>
+
+[Triggers](https://www.datacamp.com/tutorial/sql-triggers)
+
+Deleting a trigger 
+```sql
+DROP TRIGGER IF EXISTS trigger_name;
+```
+
+Displaying existing triggers
+```sql
+SHOW TRIGGERS;
+```
+
+  
+</details>
+
+So, SQL triggers are extremely useful tools that can really enhance your database's performance because they automate tasks, ensure data integrity, and provide error handling and logging capabilities. <br/> 
+That's all about triggers!!
+
+<!------------------Triggers---------------------->
+
 
 <!-----------Chapter 9. Advanced SQL Techniques--------------->
 [< Aggregation & Analytical Function](https://github.com/pawansinghfromindia/SQL/blob/main/08_Aggregation_and_Analytical__Functions/aggregation_and_analytical_functions.md) |
