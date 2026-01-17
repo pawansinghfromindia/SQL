@@ -78,7 +78,7 @@ How we can create them?
 </details>
 
 <details>
-  <summary> <b> Clustered Index & Non-Clustered Index </b> </summary>
+  <summary> <b> Heap Structure</b> : Page, Data Page(Header,Rows Spaces,Offset array), Full table Scan </summary>
 
 Before we dive into How indexes work in database? <br/>
 
@@ -165,6 +165,8 @@ until covered all the rows that are being inserted.
   using any index.
 - We call this Structure as **Heap Structure**.
 
+#### **Heap Structure**
+
 > Heap table = Table without Clustered Index
 > - that means the Rows are stored randomly without any particular order.
 > - This is not very bad, bcuz It's going to be very quick to insert the data inside the table.
@@ -176,9 +178,48 @@ a specific paper later, It is going to very long time taking process until we fi
 
 <img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/60ce4214-f8c9-4f51-84fa-41ada666083e" />
 
-**Heap Structure**
+Let's see How SQL handle this Heap Table while we read something from it? <br/>
+-  We're searching for the Customer with the id = 14.
+-  So, now SQL has no idea where to find this customer whose id = 14.
+-  So SQL start fetching each data page and start scanning each rows.
+-  SQL will start with 1st Data Page and start scanning the rows in it. If not find move to next data page i.e. data page 2 there again start scanning all the rows inside it, here also SQL doesn't find it Now It will move to the next data page i.e data page 3 here gain it start scanning all the rows and it doesn't find here and it will move to the next data page 4 there it will scan all the rows and at the row 4 of it SQL found the customer whose id = 14.
+
+<img width="300" height="200" alt="image" src="https://github.com/user-attachments/assets/82f5748b-270e-4d57-baa0-0dfaa9b30f76" />
 
 
+Finally SQL will find and return it to the client, if it doesn't find it will return no result to the client.
+
+Here, As we can see in order to find one customer SQL did read 4 different pages & scanned around 15 rows in order to find the specific customer. This process we call it **Full table Scan**
+
+**Full Table Scan**
+> **Full Table Scan Means SQL scans the entire table page by page and row by row in order to find specific row (searching for data).
+
+Here, in this customer table we have only 4 data pages & each datapage has 6 rows. There is no big deal for SQL. But If there is a big table containing 1000s of rows searching through Heap Structure will be very painful & slow in order to read one row.
+That's exactly why we need Indexes in database. 
+
+</details>
+
+<details>
+  <summary> <b>Clustered Index </b> </summary>
+  
+Let's understand what is going to happen if we create clustered index in our table.
+
+We create a cluster index on the id column of the customer table.
+
+- So, first thing SQL is going to do is to  physically sort all the data based on the column id. <br/>
+So, the rows are going to re-arrange in each data page from the lowest to the highest. <br/>
+So, in the first page, we will have first customer id = 1, then id = 2, the 3, 4, 5, 6,......and so on until we reach the last page & last customer id = 20.<br/>
+So, the first page has the lowest customer id values and the last page has the highest customer id values. <br/>
+<img width="300" height="200" alt="image" src="https://github.com/user-attachments/assets/9c25b57a-85cd-4dcd-b8a4-3b888c3247c7" />
+
+
+- Next step is, SQL will start structuring and building the **B-Tree** (Balance Tree)
+
+**What is a B-Tree ?**
+> A B-tree(Balance Tree) is a hierarchical structure that is storing data at leaves, to help quickly locate data.
+> - It starts with the root and then it keep branching out until we reach eventually the leaves.
+> - Between the **leaf nodes** and **root nodes**, We call this section **intermediate nodes**.
+> - It can be of one level or multiple level
 
 </details>
 
