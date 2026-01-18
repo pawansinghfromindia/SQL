@@ -221,10 +221,147 @@ So, the first page has the lowest customer id values and the last page has the h
 > - Between the **leaf nodes** and **root nodes**, We call this section **intermediate nodes**.
 > - It can be of one level or multiple level
 
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/32df51d8-02c5-4e7b-b445-fe2e254fb630" />
+
+Once SQL construct the B-Tree, It's going to very easy for SQL to navigate through the B-Tree in order to specific information.
+
+Let's see How SQL builds the B-Tree for the Clustered index? <br/>
+It's very important to understand that the **Leaf Node** in the B-Tree for clustered index contains the actual data, the data pages 
+So, all our nicely sorted data pages stored at the leaf level.
+Then after that SQL starts building the **Intermediate Nodes** and here SQL use different type of pages, we have the **Index page**
+
+**Index Page**
+> It store key values(Pointers) to another page.
+> - It doesn't store the actual data(rows).
+
+- In the Index page, we can't find the actual data, entire rows but instead Index page stored a key value that contains a pointer to another index page or data page.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/e428e25c-f5f9-4992-900d-b19da8c89bfe" />
+
+So, if we're searching for IDs between 1 and 5, we locate it at data page ID = 1 : 100 and then we can store in this index page another pointer where we can search IDs between 6 and 10, we can get it at data page ID = 1 : 101.
+This is what the structure of an Index page which contains only pointers to another page.
+Same thing SQL is going to create for another index page for 2 more data pages like if we're searhing the IDs between 11 to 15, we can get it at data page ID = 1 : 102 similar for Ids between 16 to 20, we will get it at data page ID = 1 : 103
+
+As we can see inside those Index Pages, we have a pointer for each group of ids for each cluster. SO for the group of customers between 1 and 5 we have one pointer and for the second group between 6 and 10 we have another pointer. SO that means we don't have a pointer to a pointer for each row, we have a pointer to each group / for each cluster / each data page. That's why we call it **clustered Index**.
+
+Now SQL is done building intermediate node. <br/>
+Now SQL is will and build the last node the **Root Node** where it says if you're searching for customers between 1 1 and 10 then go to index page with ID = 1 : 200. That means Root Node here is pointing to another index page not directly to the data page. Similarly if we're looking for customers between 11 to 20 then it will go the index page with ID = 1 : 201.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/6cbba823-98ef-4b97-9e1c-53cb96a0bb30" />
+
+This is what exactly happens if we create a clustered Index.
+- First it will physically sort all the data in the data pages. So if the first time sorted randomly SQL has to arrange everything and sort the data from the scratch.
+- Then it will build a structure where we have a root node and index page and intermediate nodes the index pages  but at the leaf level, we have actual data, the data pages.
+
+Let's see what happenf if we query the table  where we search for the customer_id=14.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/c76e7f11-a1aa-4cb7-a9fd-925638d04f98" />
+
+
+So, It is going to check pointer number 2, since 14, It is a group between 11 and 20. where Index Page ID = 1 : 201
+Then it will open the Index page ID = 1 : 201 and Since 14 is between 11 and 15 so It will check the pointer to data page ID = 1 : 102
+And with that SQL locate the correct data page.
+Now SQL will open this data page and find the customer_id = 14.
+So, It was very fast for SQL to locate the correct data page, with only 3 jumps from the root node to intermediate node, SQL is able to find the correct data page quickly. bcuz here SQL needs only to read one data page instead of all data pages as we saw in the Heap structure for different data pages.
+
+Well we can say here still we are reading 3 pages but you know **Reading a index pages is very fast compared to a data page** bcuz at top level of Index pages only contains pointers to another index pages, as only leave nodes contains the data pages which holds the actual data.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/425b2ff6-0768-41e3-bc7e-aa7774165e2d" />
+
+This is exactly How Clustered Index works in SQL database. 
+
+</details>
+<!---------------Clustered Indexes------------------>
+
+<details>
+  <summary> <b>Non-Clustered Index </b> </summary>
+
+Let's see How SQL builds the Non-Clustered Index?
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/4d8566bd-1122-4de8-a509-c1847add915d" />
+
+As we know in Heap structure where table don't have any index and data are stored randomly inside the data pages.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/577c1122-9693-4508-aae2-0c4f42bfb83f" />
+
+Now, if we go and create a non-clustered Index on the customer_id what is going to happen is SQL will not touch or change anything on the physical actual data on the data pages, so the data pages is going to stay as it is and nothing is going to be change.
+
+And SQL start building the B-Tree structures. So, It is immediately start building an index page. This index page is little bit different than the one which it builds in Clustered Index. 
+Since It's an index page, it stores pointers but this time SQL will store here in this Index page key is Customer_Id and values will be not data pages ID.
+So, It's going to start with File ID and page number because customer_id=1 is stored in the page 1:102. But SQL will going to add Offset Number of the row as well where exactly in the page we can find the this customer_id and the whole thing we call it an **R ID** the Row Identifier.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/2d865e6a-38e3-446f-a017-b923bea0c30a" />
+
+Now Let's see how Index Page is exactly pointing to the row inside the data page?
+So, The first part of ***Row Identifier*** RID [1:150] is mapping to the ***data page ID***
+Then from the second part of ***Row Identifier*** RID [96] is mapped to the ***Offset number*** that holds exactly the location of the all rows so obviously row 1. That's exactly the place where we read information about row ID = 1
+This is how Index Page is locating the exact pplace of the rows.
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/dd3921cc-65a7-4aec-95f4-e171ece789ca" />
+
+So, SQL will go and continue and assign for each customer_id a pointer to the exact location.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/55394979-6c6b-467e-bad3-77747e20d30b" />
+
+As we can see in the index page we don't have a pointer for each group of customers like we have learned in Clustered index but now we have a pointer for each customer_id and this type of index page, we call it **ROW LOCATOR PAGE**.
+
+So now SQL will continue to map a pointer for each customer_id that we have inside our table.
+So, We will have multiple index pages pointing to our data page.
+
+> We will have a lot of pointers and the data inside index pages is of course sorted but inside the data pages it is left as it is.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/820c19de-58ce-4ea7-8542-9378b93b6eb2" />
+
+
+Those index pages that has the Row Identifier RID is going to be stored at leaf level of the B-Tree.
+At the leaf level we don't have the actual data the data pages we have index pages where we have pointers to the actual data. Then SQL will go and start building the intermediate nodes, It's exactly like clustered Index where It is going to point another index page.
+So, between 1 and 5 customers it's index page numeber 200 and so on.
+
+<img width="400" height="150" alt="image" src="https://github.com/user-attachments/assets/936a968a-caab-4020-af26-c1644ef69c73" />
+
+The next step SQL will do is builds Intermediate Node. It's exactly like the clustered Index, nothing is going to change. It's like same structure. So, It is an index page pointing to another index page but for this for a group of customers.
+
+<img width="400" height="200" alt="image" src="https://github.com/user-attachments/assets/5bdef7e9-5933-4093-a98d-18b12b7c05ca" />
+
+Then we are going to have Root node.
+Again we call this structure as B-Tree structure where they points to another data pages but the data pages are not part of the B-Tree.
+
+<img width="400" height="200" alt="image" src="https://github.com/user-attachments/assets/76bc3492-80b5-4ac4-bd9c-b86bf9cc7192" />
+
+Now, Let's see we're searching for Customer_id = 14, What SQL does?
+- SQL starts again from the Root node, Then find the pointer to the intermediate node
+- Then jump to the next step to the intermediate node, then It finds the pointers to the index page between 11 and 15.
+- Then SQL will can the index page and find for the customer_id = 14 , we have the following address there.
+- So, It locates the exact data page and exact place of that row in the data page.
+- So, Jump directly to the row without scanning anything else.
+- So, here this time Non-Clsutered Index, the SQL read 3 different index pages and finally found the data in one data page.
+
+<img width="400" height="200" alt="image" src="https://github.com/user-attachments/assets/eeaa0933-2988-44ea-b02f-8fbd4df49c80" />
+
+This is how SQL Create the B-Tree for Non-clustered Index and how SQL scans it in order to find the information.
+
+ So, If we compare the Non-Cluster Index to Clustered Index, So in non-clsutered index we have one extra  layer to be scanned in order to find the right place of the row.
+ 
+</details>
+<!---------------Non-Clustered Indexes------------------>
+
+<details>
+  <summary> <b>Clustered Index vs Non-Clustered Index </b> </summary>
+
+We can think of Clustered Index as Book's Table of Content at the front of the Book.
+So, Table of contents tells us where to find each chapter and chapters are exactly sorted in table of content.
+This is waht exactly Clustered Index does.
+
+<img width="200" height="500" alt="image" src="https://github.com/user-attachments/assets/e1b25386-f049-4583-8225-12d3a2bb7dcd" />
+
+On the other hand, think about the Non-Clustered Index as the Index page that we can find at the end of the book.
+The index of the book is a very detailed list of topic, terms & keywords where it points exactly to the loaction where we can find it in the book. And the content/topic of the book is not sorted like the index of book.
+This is exactly what the Non-Clustered Index does. It is co-existing with the data, It is an extra list where it can point exactly where to find data inside our table. 
+
+
 </details>
 
 <!---------------Indexes------------------>
-
+****
 
 
 ## 10.2 Partitions
