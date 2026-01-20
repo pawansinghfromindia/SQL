@@ -296,6 +296,7 @@ Now Let's see how Index Page is exactly pointing to the row inside the data page
 So, The first part of ***Row Identifier*** RID [1:150] is mapping to the ***data page ID***
 Then from the second part of ***Row Identifier*** RID [96] is mapped to the ***Offset number*** that holds exactly the location of the all rows so obviously row 1. That's exactly the place where we read information about row ID = 1
 This is how Index Page is locating the exact pplace of the rows.
+
 <img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/dd3921cc-65a7-4aec-95f4-e171ece789ca" />
 
 So, SQL will go and continue and assign for each customer_id a pointer to the exact location.
@@ -351,18 +352,268 @@ We can think of Clustered Index as Book's Table of Content at the front of the B
 So, Table of contents tells us where to find each chapter and chapters are exactly sorted in table of content.
 This is waht exactly Clustered Index does.
 
-<img width="200" height="500" alt="image" src="https://github.com/user-attachments/assets/e1b25386-f049-4583-8225-12d3a2bb7dcd" />
+<img width="200" height="400" alt="image" src="https://github.com/user-attachments/assets/e1b25386-f049-4583-8225-12d3a2bb7dcd" /> <img width="200" height="400" alt="image" src="https://github.com/user-attachments/assets/a190d1cf-2913-4f28-a744-910da36fd2ff" />
 
 On the other hand, think about the Non-Clustered Index as the Index page that we can find at the end of the book.
 The index of the book is a very detailed list of topic, terms & keywords where it points exactly to the loaction where we can find it in the book. And the content/topic of the book is not sorted like the index of book.
 This is exactly what the Non-Clustered Index does. It is co-existing with the data, It is an extra list where it can point exactly where to find data inside our table. 
 
 
+
+| Clustered Index vs Non-Clustered Index |
+|-------------------------------------|
+| <img width="300" height="200" alt="image" src="https://github.com/user-attachments/assets/71b2d641-5f7f-41cc-918d-32c8586ec62a" /> | 
+
+The big difference between Clustered Index and Non-Clustered Index is that : <br/>
+- In Non-Clustered Index, Data-pages are not part of the B-Tree.
+- The B-Tree of the Non-Clustered Index is just a separate structure that doesn't involve any data.So we have only index pages and it just points to the data-pages without changing anything physically with our data.
+
+But in reality what happens is we can have both indexes Clustered Index and Non-clustered Index in one table.
+One can have leaf level of that Non-clustered index is going to point to data pages of the Clustered Index. Bcuz those index pages don't care whether those pages are sorted or not. It just going to point to the correct data page and correct row.
+
+Here, we have two different B-Tree structure that are pointing to the data.
+
+<img width="300" height="200" alt="image" src="https://github.com/user-attachments/assets/b3a5c754-394f-4fbd-a20a-eeb701f589c3" />
+
+Basically we can create only one clustered index on a table. This make sense bcuz we can store the data only in one way in SQL. that's bcuz we can sort the data only once. That's why in SQL we are allowed to create only one clustered index. bcuz physically the data can be sorted only one way.
+
+On the other hand in Non-Clustered index, we can create as many non-clustered index we need. So, we can create 3 or 4 etc and all of them are pointing to the same data-pages. bcuz in the B-Tree of Non-clustered index we don't store any data pages. We store only pointers to the data that's why we could have multiple pointers.
+
+<img width="300" height="200" alt="image" src="https://github.com/user-attachments/assets/35cddfbb-b935-4215-acec-89e9e7824ac4" />
+
+<img width="400" height="200" alt="image" src="https://github.com/user-attachments/assets/57596788-006c-4aa7-a15e-91be990dd4c0" />
+
 </details>
 
-<!---------------Indexes------------------>
-****
+<details>
+  <summary> <b>How to create Index ? </b> </summary>
 
+Syntax of Index :
+
+```python
+CREATE [CLUSTERED | NONCLUSTERED] INDEX index_name ON table_name (col1, col2, ...);
+```
+
+The default Cluster is Non-Clustered, So if we do not mention cluster SQL will created NON-CLUSTERED
+```sql
+CREATE INDEX index_name ON table_name (col1, col2, ...)
+```
+
+```python
+CREATE CLUSTERED INDEX IX_customer_id ON Sales.customer (customer_id);
+
+CREATE NONCLUSTERED INDEX idx_customers_city ON Sales.customers (city);
+
+CREATE INDEX idx_customer_name ON Sales.customers(las_name ASC, first_name DESC)
+```
+
+Que : Where do we find indexes in Database?
+- We can to Object Exporer > Database > Table > Indexes > there you find index.
+
+> Important INFO : **a Primary Key(PK) automatically creates a clustered index by default**
+> - bcuz it always make sense to create index on primary key.
+
+So, let's create a new table without any indexes. <br/>
+```sql
+CREATE TABLE Sales.NewCustomers USING
+(
+  SELECT *
+  FROM Sales.customers
+)
+
+--OR
+
+SELECT *
+INTO Sales.NewCustomers
+FROM Sales.customers
+```
+
+Here if we search for customer_id = 1, SQL will do fullscan of the table NewCustomers in order to find the customer_id = 1. So, our newCustomer table is a heap cluster.
+```sql
+SELECT *
+FROM Sales.NewCustomers
+```
+But let's change that by create a new cluster index on our table.
+```sql
+CREATE CLUSTERED INDEX idx_newcustomers_id ON Sales.NewCustomers(customer_id)
+```
+Now let's check the indexes of our new table Object Explorer > Database > Table > Indexes > there idx_newcustomers_id.
+
+> **Rule : Only one clustered index can be created per table**
+
+Let's try to create one more clustered index and let's see what happen?
+```sql
+CREATE CLUSTERED INDEX idx_newcustomer_name ON Sales.NewCustomers(first_name DESC);
+-- Error : Can't create more than one clustered index
+```
+If we created index on wrong table, then what to do? Drop the old index and create new index.
+```sql
+DROP INDEX index_name ON table_name;
+
+DROP INDEX idx_newcustomer_id ON Sales.NewCustomers;
+```
+
+So, creating index on Customer_name column is not right bcuz Customer_name is not unique and update could happens in name that's why it's not primary key. <br/>
+So, creating correct index is important that's why we should create index on unique column which is primary key.
+
+Let's say we have table and we're seaching for the last_name.
+```sql
+SELECT *
+FROM Sales.NewCustomers
+WHERE last_name = 'Brown';
+```
+So, our table is having more and more new customers and table is getting bigger and bigger. And we frequently using the above query where last_name = ''. <br/>
+So what we can do here is we can create a non-clustered index for the last_name in order to improve the performance of the query.
+
+```sql
+CREATE NONCLUSTERED INDEX idx_newCustomer_lastname ON Sales.NewCustomers(last_name);
+```
+Open object Explorer > Database > Table > Indexes > there idx_newCustomer_lastname.
+
+We can created multiple non-clustered index on the same table.
+
+So, Suppose we're also using another query by first_name, very frequently and it is slow. So we can create another non-clustered index on the same table. <br/>
+Even if we don't specify the type of index it will create Non-Clustered Index.
+```sql
+CREATE NONCLUSTERED INDEX idx_newCustomer_firstname ON Sales.NewCustomers(first_name);
+--OR
+CREATE INDEX idx_newCustomer_firstname ON Sales.NewCustomers(first_name);
+```
+Open object Explorer > Database > Table > Indexes > there idx_newCustomer_lastname,idx_newCustomer_firstname
+
+</details>
+
+<details>
+  <summary> <b>Composite Index </b> </summary>
+
+> **Composite Index** is an index that has has multiple columns inside same index.
+
+Why we need it?
+- That's bcuz sometime our where conditions are complicated and based on multiple columns.
+- e.g. searching for country = USA and Score > 100
+```sql
+SELECT *
+FROM Sales.NewCustomers
+WHERE country = 'USA' AND score > 100
+```
+As we are using two filters and we want to speed up this query. So How can we do that? : by creating idex.
+```sql
+CREATE INDEX idx_newCustomer_countryScore ON Sales.NewCountry (score, country); --❌
+
+CREATE INDEX idx_newCustomer_countryScore ON Sales.NewCountry (country, score); -- ✅
+```
+> **Rule : The columns of index order must match the order in your query.**
+
+Open object Explorer > Database > Table > Indexes > there idx_newCustomer_lastname, idx_newCustomer_firstname, idx_newCustomer_countryScore 
+
+once we create such index, our table will always update this index. So we have to be committed and responsible. 
+So, in our query if we want to filter the data using country and score, always start with country and score in order to be able to use the index optimizer.
+So, If the order of filter is same as the index created order it's fine otherwise SQL will be not using the index we created. so, **column order is very important in indexing**. So, either adjust your query or re-create index based on column order.
+
+What happens if we have created index using 2 columns and while querying we're filtering on only one column?
+```sql
+SELECT *
+FROM Sales.NewCustomers
+WHERE country = 'USA';
+```
+Yes, It will use index optimization bcuz it follows the leftmost prefix rule.
+
+**Leftmost Prefix Rule**
+> Index works only if your query filters start from the first column in the index and follow its order.
+
+```sql
+SELECT *
+FROM Sales.NewCustomers
+WHERE score > 100;
+```
+No, It will not use index optimization bcuz It does not follow leftmost prefix rule.
+
+So, basically we have index based on for columns A, B, C, D and if target the columns A it will work, if we target A,B it will also work, if we target A,B,C it will also work and if we target A,B,C,D ofcourse it will work.
+But if we target B, it will not work and if we target A,C it will not work. <br/>
+So, It will only use index optimization if and only if it follows the leftmost prefix rule.
+
+</details>
+
+Till here, we have see the first category of index i.e. based on structure **Clustered Index** and **Non-Clustered Index**. <br/>
+<!----------index i.e. based on structure------------------->
+Now next we will see the second category of index i.e. based on Storage **RowStore Index** and **ColumnStore Index**
+
+<details>
+  <summary>What is <b>ColumnStore Index</b> ?</summary>
+
+Let's say we have table in which we have multiple rows and multiple columns.
+
+Now if we use a Row Store Index, this is the classical one. What is going to happen is It will splitted into multiple rows and each group of rows will be going to be stored inside a data-page that means we're orgnazing the data row by row which means all the for each row is going to be stored together. This is the traditional way on how the databases organize their data where the information are stored row by row.
+
+On the other side if we use Column Store Index, the SQL will split the table into multiple separate columns and SQL stored values of one column together in data-page that means if we open the data-page we will find only values of one column, we will not find the entire row.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/ca8f3306-462b-46c6-8167-8e1064fdbdd4" />
+
+> The **Row Store Index** stores the data **row by row** and **Column Store Index** stored the data **column by column**
+
+This is a very high level representation on how the row store index and column store index stores the data.
+We will see in details in order to understand exactly how SQL works with Row STore Index and Column Store Index.
+
+</details>
+
+<details>
+  <summary>How SQL builds Column Store Index <b>The process</b> ?</summary>
+
+Let's say we have a table for Customers in which 3 columns id, name and status. and we have around 2 million rows in the customer table.
+
+| Id | Name | Status |
+|----|------|--------|
+|....|......|........|
+|....|......|........|
+|....|......|........|
+|....|......|........|
+|....|......|........|
+
+As we know the table is by default built as Heap Structure where rows are stored row by row inside the data-pages.
+But now we have to create a column store index on top of this table.
+
+Once we do that, SQL will go through a process in order to build the column store index.
+
+1. 1st step is SQL will divide the data, the rows into **Row Groups**. <br/>
+Now in SQL server, each row group can contain like around 1 million rows. <br/>
+So, in this example our table is going to be splitted into 2 groups.
+   - the 1st group one million row in one group
+   - the 2nd group one million row in second group
+Now we might have a question, we're talking about columns still we're splitting the row? <br/>
+Well, this is just a pre-step in order to just optimize the performance and do parallel processing. <br/>
+Of course the data will not be stored like this bcuz we have the second step.
+
+2. 2nd step is SQL will **Segment the Columns**
+Now SQL will go and for each row group and start splitting the data by columns. That's why we call it Column Store because we're separating the columns from each others so that we have one segment for one column and another segment to second columns and so on. <br/>
+Now SQL will move to the next step in this process.
+
+3. 3rd Step is **Data Compression**.
+This is the most important step in this process bcuz it is the reason why columns store is very fast compared to row store.
+So in this process, there are like different techniques on how to do Data Compression and the most famous one is the _create a dictionary_ <br/>
+e.g. column status whether it is active or inactive, so the word active and inactive is going to repeated like 2 millions time bcuz we have 2 million customers and since it is like string so it will take a lot of spacce and storage, But now instead of that we're going to compress the data.
+- 1st SQL will create a dictionary by replacing the value Active and NonActive into smaller value like 1 and 0.
+  so we have mapping between the long value to a small value.
+- After that SQL will store the data stream where we have like only 2 values 0 and 1. So, we have a big stream of 2 million rows. So, It is going to do this for each column and with that the size of each column is going to change depends on how much different values we have in each column.
+
+So , this step is very important in order to reduce the size of data and as well to increase the performance.
+Now once everything is organized and compressed, SQL will start storing the results in data-pages. But here SQL will not use the standard Data-pages that we learned previously. But instead SQL will use a special data-page called **LOB = Large Object Page** 
+
+<img width="500" height="300" alt="image" src="https://github.com/user-attachments/assets/882c046f-9ea5-4a9b-909a-63665d9706d6" />
+
+Let's compare the Normal Data-Page (Row Store) and LOB Large Object-Page(Column Store).
+- As usual each page has a **Header**, So similar to data-page, LOB page has also a header.
+- Next segment in LOB has a **Segment Header** which is metadata information aboutcolumn segment
+
+
+</details>
+
+
+<details>
+  <summary>What is <b>RowStore Index</b> ?</summary>
+</details
+<!----------index i.e. based on storage------------------->
+
+<!---------------Indexes------------------>
 
 ## 10.2 Partitions
 <details>
