@@ -598,19 +598,226 @@ e.g. column status whether it is active or inactive, so the word active and inac
 So , this step is very important in order to reduce the size of data and as well to increase the performance.
 Now once everything is organized and compressed, SQL will start storing the results in data-pages. But here SQL will not use the standard Data-pages that we learned previously. But instead SQL will use a special data-page called **LOB = Large Object Page** 
 
-<img width="500" height="300" alt="image" src="https://github.com/user-attachments/assets/882c046f-9ea5-4a9b-909a-63665d9706d6" />
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/ecd6a3b8-e7aa-4281-90f4-81f359a79ff8" />
+
 
 Let's compare the Normal Data-Page (Row Store) and LOB Large Object-Page(Column Store).
 - As usual each page has a **Header**, So similar to data-page, LOB page has also a header.
-- Next segment in LOB has a **Segment Header** which is metadata information aboutcolumn segment
+- Next segment in LOB has a **Segment Header** which is metadata information about column segment that is stored in this page like segment_id, row_group_id, dictionary_id.
+> Dictionary page is also a type of page in SQL. It has a header and inside it we have mapping. It maps the original value i.e. long value to smaller value.
 
+- Beneath the Segment header, We have a place where data is stored i.e. known as **Data Stream**. It is a sequence of Id from the dictionary that represents the values of the column side by side. <br/> Of course we can't fit the one million rows inside the one Data Stream, that's why we have multiple LOP (large object Pages) 
+
+This is how SQL exactly store the data, if we go with the ColumnStore.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/3d4cc3f6-4944-4c2b-9472-c9508b7e6489" />
+
+
+As we can see SQL stores data as LOP data storage, so this is the last step and with that SQL did convert our table into a columnStore. <br/>
+Now we can't just create a column store without defining whether it is clustered index or non-clustered index.
+
+So let's 1st start with Clustered ColumnStore Index.
+- If we create such an index, SQL will not build a B-Tree structure. SQL is going to use the ColumnStore Structure.
+- As we learned the clustered index is a complete makeover of our table. When we apply it the SQL will format everything column-wise and It is fully replacing the old Row based table structure that we have at the start.
+- So, once we applied the ColumnStore Index, It will not leave anything behind and our table is going to completely structured as a column stored.
+- One more thing which makes sense is all the columns from the original table is going to convert to a columnStore.
+
+<img width="500" height="200" alt="image" src="https://github.com/user-attachments/assets/fcef485d-92e0-4b99-9e85-2e0f57e7a211" />
+
+
+On the other hand if we're suing Non-Clustered ColumnStore Index, 
+- As we learned It is like a companion to our existing table. So, It co-exist with the table and it will not replace anything.
+- So, ColumnStore index can be an additional thing that is stored beside our table. That means the original table is not deleted at all like Clustered ColumnStore Index. The 1st one is in the old row based storage and the regular table, the first one and our data is going to stored in a separate structure  in the ColumnStore Index.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/19e69f17-6fc2-4ef4-b864-9d921a0411d4" />
+
+
+- Of course in Non-clustered ColumnStore Index, Since we're creating an extra index outside of original table, we can define which column should be included in this process. It must not be all the columns, for example we can have only one column like status. that means we built a columnStore index only for one column which is status of the customer.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/eb837c3e-ad38-4f19-ad64-0407e927f62e" />
+
+This is what we mean with the clustered columnStore Index and the non-clustered ColumnStore index.
 
 </details>
 
 
 <details>
-  <summary>What is <b>RowStore Index</b> ?</summary>
-</details
+  <summary>What is <b>RowStore Index vs ColumnStore Index</b> </summary>
+
+Why would we split our data by the columns?
+- It's all bcuz of Analytics, in analytics we have big complex query where we have a lot of data aggregations and stuffs on the big tables and the RowStore Index is perfectly designed in order to improve the performance of such big queries. That's why SQL databases like SQL Server and BI tools like PowerBI did adopt this method in order to offer fast platform for data analysis.
+
+Let's understand why the ColumnStore Index is way faster for Data Analyser than the RowStore Index.
+- we have a customer table, where we have 5 customers with columns Id, Name and status.
+
+|Id  | Name | Status  |
+|----|------|---------|
+| 1  |Mahesh| Active  |
+| 2  |Suresh| Inactive|
+| 3  |Ganesh| Active  |
+| 4  |Dinesh| Active  |
+| 5  |Ramesh| Inactive|
+
+- If we are using RowStore Index, the data can be store in multiple data-pages and in each data-page we're going to have the whole record (whole information about one customer) for this example we have 3 data-pages.
+
+- But if we are using ColumnStore Index, the data is going to stored little bit differently.
+  - Here first column id is stored in one data-page and here SQL will bot build a dictionaru bcuz Ids are already short. We're going to have one Data-Stream with all ids and
+  - for the next column name is going to stored in separate data-page where we're going to have extra dictionary-page where each name is going to map to a small value so the data is going to be compressed save storage and in the Data-storage will have ids of the dictionary.
+  - Now for the third column status, we will have one more data-page where there is another extra dictionary-page to map each status is map to a small value and in the Data-Stream we will be storing only ids of the dictionary. 
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/a328c269-4ae3-409c-807b-1383505ad897" />
+
+Let's understand why the ColumnStore Index is faster. <br/>
+Suppose we have a query to find the total number of customers that are active. <br/>
+Query : 
+```sql
+SELECT
+    COUNT(*)
+FROM Sales.customers
+WHERE status = 'Active'
+```
+If we query the table with RowStore Index what is going to happen is SQL first go and collect the data like it will go to 1st data-page and collects first 2 customers then second and then and so on.
+As we can see here, SQL is reading everything the whole rows id,name,status even though for that query where we actually don't all those information, we just need to count how many customers we need with status active.
+After that SQL has all the data then it will filter the data only for active rows. Then SQL will do the aggregate operation and with that we will get the final result 3 rows which are active.
+
+But let's see how SQL will query the ColumnStore Index, here SQL first analyse which column it needs actually for this query. Well It only needs status. So, SQL will not go and open all three data-pages and read it rather It will target only one data-page, the data-page where we have column Status. So, SQL will take this very simple Data-Stream of column 3 and understand the dictionary of it and it will remove all the values where it's equal to 0 to filter out inactive status and return the final result which has only 3 rows that are active.
+It is very quick.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/afc1d554-f281-45f6-affd-c5ae3a387d20" />
+
+
+Now, if we compare the intermediate resultsets from the RowStore Index and COlumnStore Index, we can see that in the RowStore we have fetch and retrieve a lot of unnecessary information for this query which is even not required. This will make speed of the query very slow. <br/>
+But in the columnStore, SQL reads exactly what it needs for the aggregation in query. We didn't read any extra information about the names, ids of the customers.
+That's why the performance of the queries where we have aggregations and data analysis, It is going to very fast if we're using ColumnStore Index compared to the RowStore Index.
+
+|                       | RowStore Index                     | ColumnStore Index                              |
+|----------------|-------------------------------------------|------------------------------------------------|
+| Definition :   | Organizes and stores data **row by row** | Organizes and stores data **column by column**  |
+| Storage Efficiency : | **less efficient** in storage        | **highly efficient** bcuz of **Compression**  |
+| Read/Write Operation :|Fair speed for read and write operations | **Fast** read performance **slow** write performance |
+| I/O Efficiency : | **Lower** (retrieves all columns)        | **Higher** (retrieves only **specific** columns)|
+| Best for :       |**OLTP** (Transactional) <br/> commerce, banking, financial systems, order processing | **OLAP** (Analytical) <br/> Data WareHouse, Business Intelligence, Reporting, Analytics |
+| Use case : | High Frequency transaction application <br/> Quick access to complete records | Big Data analytics <br/> Scanning of large datasets <br/> Fast aggregation. |
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/e6896330-ce1a-4617-8a59-d9361cb3ca46" />
+
+</details>
+
+<details>
+  <summary> How to create <b>ColumnStore Index</b> ? </summary>
+
+Syntax of ColumnStore Index :
+```python
+CREATE [CLUSTERED | NONCLUSTERED] [COLUMNSTORE] INDEX index_name
+ON table_name (col1, col2, ...)
+```
+- If we don't specify the ```COLUMNSTORE``` then it will by default Create ```ROWSTORE```.
+
+```ROWSTORE``` 
+```py
+CREATE NONCLUSTERED INDEX idx_customers_country ON Sales.customers (country);
+
+CREATE CLUSTERED INDEX idx_customers_id ON Sales.customers (id);
+```
+```COLUMNSTORE``` 
+```py
+CREATE NONCLUSTERED COLUMNSTORE INDEX idx_customers_country ON Sales.customers (country);
+
+CREATE CLUSTERED COLUMNSTORE INDEX idx_customers_id ON Sales.customers (id); # ❌ Not allowes to use column in Clustered Index bcuz It make no sense once awe say Clustered ColumnStore then all the columns will included in the new structure.
+
+CREATE CLUSTERED COLUMNSTORE INDEX idx_customers ON Sales.customers
+```
+> **Rule :** We can't specify Columns in **Clustered ColumnSTore Index**
+
+<img width="500" height="300" alt="image" src="https://github.com/user-attachments/assets/27de9aa5-c718-43dc-b065-e4dd90b1dbff" />
+
+Now if we check Object explorer > Database > Table > Indexes > there you will find all your indexes
+```sql
+
+CREATE CLUSTERED COLUMNSTORE INDEX idx_customers_id ON Sales.customers (id); //❌ Error not allowed
+
+CREATE CLUSTERED COLUMNSTORE INDEX idx_customers  ON Sales.customers; // ✅ but again an error ❌
+
+DROP INDEX idx_customers_id ON Sales.customers;
+
+CREATE CLUSTERED COLUMNSTORE INDEX idx_customers  ON Sales.customers; // ✅
+```
+> **Note : We can't create more than one Clustered index on the same table!**
+
+```sql
+CREATE NONCLUSTERED COLUMNSTORE INDEX idx_customers_firstName  ON Sales.customers (first_name); //❌ Error
+
+DROP  INDEX idx_Customers ON Sales.customers;
+CREATE NONCLUSTERED COLUMNSTORE INDEX idx_customers_firstName  ON Sales.customers (first_name); //✅
+```
+> **Multiple ColumnStore indexes are not supported!**
+> - We can't create multiple columnstore indexes, we can create only one columnstore index for each table.
+> - We have to decide bewteen CLUSTERED or NONCLUSTERED either of them. unlike ROWSTORE Multiple Non-Clustered Index.
+> - This limitation is only in SQL Server, in other databases like Azure SQL Server, It is allowed to have multiple columnStore indexes.
+
+
+As we know that ColumnStore Index is going to compress the data and that makes it to take less storage for the entire table than the RowStore Index. <br/>
+Let's check whether that's true or not? <br/>
+To do this :
+- Let's create 3 identical copies of a table and have different structures on each of the copy
+  - 1st copy -> heap Structure
+  - 2nd copy -> rowStore Structure
+  - 3rd copy -> columnStore Structure
+- Then compare the storage of all of these three.
+
+```sql
+USE Testing --switching the database Sales to Testing
+
+--HEAP
+SELECT *
+INTO Testing.customers_heap
+FROM Testing.customers;
+--With that we have created a heap table Since we didn't define any clustered index. 
+
+--ClUSTERED ROWSTORE INDEX
+SELECT *
+INTO Testing.customers_rowStore
+FROM Testing.customers;
+CREATE CLUSTERED ROWSTORE INDEX idx_customers_id ON Testing.customers_rowStore (id, order_id);
+
+
+--COLUMNSTORE INDEX
+SELECT *
+INTO Testing.customers_columnStore
+FROM Testing.customers;
+CREATE CLUSTERED COLUMNSTORE INDEX idx_customer_status ON Testing.customers_columnStore (status);
+```
+Now we have created those 3 tables, let's check storages of each of them.
+- 1st Heap table ```Testing.customers_heap``` > right click > property > storage > Data space | index space
+- 2nd rowStore table ```Testing.customers_rowStore``` > right click > property > storage > Data space | index space
+- 3rd columnStore table ```Testing.customers_columnStore``` right click > property > storage > Data space | index space
+
+Here what we will notice is that the Data Space size of Heap table and rowStore table is same but the index space size is different.
+Interesting thing is when we compare the data space of columnStore table with rowStore or heap. It is very than than these both bcuz of compression on data and no index spaces bcuz we don't have B-tree structure in ColumnStore Index
+
+Now we want to them based on storage, the best will be rowStore table, then Heap structure table and then rowStore clustered table
+
+</details>
+<!---------------Clustered ColumnStore Indexes------------------>
+
+<details>
+  <summary> <b>Unique Index </b> </summary>
+
+What is an **unique Index** ?
+- Unique Index ensures no duplicate value exist in specific column.
+- Benefits :
+  - Enforce uniqueness
+  - SLightly increase query performance
+
+> Unique index is a special type of index that make sure no duplicates in our data.
+> There are couple of reasons why it is important to have unique index.
+> 1. To have **Data Integrity**. So, Unique Index enforce uniqueness in our data and that is very helpful. e.g. if we have a column like email_address or a product_id, having duplicate these columns can mess up data very badly.
+> 2. To **improve performance**. e.g. if we're searching for specific email, the SQL start searching for the email value and once the SQL find the value, SQL will stop searching because we're sure that there is no duplicate data. So with that we're improving the performance of our queries. So, if you're creating an idex and you know this column is unique then make sure index as unique index.
+
+
+ 
+</details>
+
 <!----------index i.e. based on storage------------------->
 
 <!---------------Indexes------------------>
