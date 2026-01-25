@@ -1005,6 +1005,9 @@ Of course if the size of the index is a problem then we can use a filter index i
 
 We can use the Unique Index in order to ensure Data-Integrity of our table. As well it might improve  slightly the performance of our query and that's bcuz SQL has less task to do if the index is unique. Once SQL Engine find a match, It will skip the search.
 
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/ebfed289-7c85-4448-ac35-9b0b597a7ca6" />
+
+
 This was the quick summary and guide on when to use which index type that helps in finding the right index.
 
 </details>
@@ -1027,6 +1030,11 @@ Let's see How we should manage, maintain and monitor the indexes we have created
 | 3. Monitor Duplicate Indexes |
 | 4. Update Statistics         |
 | 5. Monitor Fragmentations    |
+
+</details>
+
+<details>
+  <summary> 1. Monitor Index Usage  </summary>
 
 1st and most important task is **to monitor the usages of our indexes**. <br/>
 We have to ask ourself over the time : <br/>
@@ -1123,7 +1131,195 @@ ORDER BY tb.name, idx.name
 ```
 Here, we're doing left join otherwise if we do inner join, we will only get used indexes but we need full build of all of our indexes in the database.
 
-Why we
+Why do we have NULLs values in most of the columns like user_seek,update,scan of this result of dmv view? <br/>
+That's bcuz those numbers will not live forever and we're using now express edition locally at our PC. So each time we shutdown our PC and close the client, the database goes shutdown as well. And those statistics get lost bcuz they're in RAM. But in the real project, numbers are totally different than what we have here in our local pc project.
+
+Now, Let's target one of those indexes which are not in used, try to query on that. Then again run query you will see in the result of the above dynamic management view that it is being used now.
+
+So, we can analyse in our project all the indexes that we have on our table and we can see whether we're using it with our queries or not. And if we're not using it. Of course, we have to make a decision about it with consulting with your team members to ask who did created it and why? Is it related to one task in the database that is not frequently used. or May be it is something that runs once in a month or something like that.
+
+Now, we have insights about what's going on with those indexes and whether we need it or not. If we don't need them drop them.
+
+90% Developer don't do it, only 10% does which makes you real hero in the project team.
+Once join a project after saying hello to team members, open the project's database just do run 1 query, check the usage of indexes on the tables of the project and once you get experience, you will realize 90% of indexes created in projects are totally untouched and unused. So collect all unused indexes and discuss it with the team and if we don't find the real usage of those indexes, drop them. So after dropping all those unused indexes, we have done 2 great things for the project.
+1. Saved a lot of Storage in the database.
+2. improved and optimized the write performance of the database.
+
+So, on 1st day with one query, we have optimized & improved the performance of the database. Also saved storage.
+
+</details>
+
+<details>
+  <summary> 2. Monitor Missing Indexes </summary>
+
+As we learned identifying unused index is important task. But on the hand, identifying a missing index is as well very important to improve the peformance of our queries.
+
+So, in SQL Server we get recommendations from the database itself about missing indexes for our query.
+
+Let's see where we can find those recommendations. <br/>
+Suppose We're doing multiple queries and analysis and so on.
+```sql
+SELECT
+    fs.sales_order_number,
+    fs.prod_name,
+    dp.color
+FROM Sales.fact_internet_sales fs
+INNER JOIN Sales.dim_product dp
+ON fs.prod_key = dp.prod_key
+WHERE dp.color = 'Black' AND fs.order_date BETWEEN '2026-11-30' AND '2026-12-31'
+```
+| sales_order_number | prod_name              | color |
+|--------------------|------------------------|-------|
+| SO43700            | Road-650 Black, 62     | Black |
+| SO43704            | Mountain-100 Black, 48 | Black |
+
+It could be any query while we're doing analysis. <br/>
+Now If we have slow query, then we can check the recommendations fromn the database about missing indexes. <br/>
+In order to do that we have ti check the metadata from database system i.e. **dynamic management view** to see the recommendation about the missing indexes. i.e. ```sys.dm_db_missing_index_details```
+```sql
+SELECT
+    fs.sales_order_number,
+    fs.prod_name,
+    dp.color
+FROM Sales.fact_internet_sales fs
+INNER JOIN Sales.dim_product dp
+ON fs.prod_key = dp.prod_key
+WHERE dp.color = 'Black' AND fs.order_date BETWEEN '2026-11-30' AND '2026-12-31';
+
+SELECT * FROM sys.dm_db_missing_index_details;
+```
+Don't forget those information is going to be inside the cache of the server and if there is like a restart or something in server, we will loose all those information.
+
+This will give a really nice report about missing indexes in the database and it could assist us to find out things that we didn't thought about. But evaluate those information very carefully. Don't go and create like an index for each suggestions for the database. Think do we really need this?
+
+> Tip : Evaluate the recommendations before creating any index.
+
+So, This is really nice tool and assistance for us in order to make a good strategy for indexing. This is how we find recommendations of missing indexes from SQL Database.
+
+</details>
+
+<details>
+  <summary> 3. Monitor Duplicate Indexes </summary>
+
+If we're working in a team with multiple developers and you're working parallely in order to optimized the performance of the query, what might happen is that different developers creating different indexes for the same column in the same table which must not happen if we have to have a clean and solid review process in the project.
+
+But as a human those things could happen, that's why we have to minitor whether there are duplicate indexes.
+
+So, the mission is to find whether there is a column that is involve in multiple indexes.
+
+Let's see how can we monitor that in SQL.
+```sql
+SELECT
+    tbl.name AS table_name,
+    col.name AS index_column,
+    idx.name AS index_name,
+    idx.type_desc AS index_type
+FROM sys.indexes idx
+JOIN sys.tables tbl ON idx.object_id = tbl.object_id 
+JOIN sys.index_columns ic ON idx.object_id = ic.object_id AND idx.index_id = ic.index_id
+JOIN sys.columns col ON ic.object_id = col.object_id AND ic.column_id = col.column_id
+ORDER BY tbl.name, col.name
+```
+| table_name | index_column | index_name | index_type |
+|------------|--------------|------------|------------|
+| customers  | country      | idx_customer_cs_country | NONCLUSTERED COLUMNSTORE |
+| customers  | country      | idx_customer_country | NONCLUSTERED |
+| customers  | cust_id      | PK_customer_A4AE64B8 | CLUSTERED |
+| customers  | country      | idx_customer_countryScore | NONCLUSTERED |
+| customers  | first_name      | idx_customer_FirstName | NONCLUSTERED |
+| customers  | first_name      | idx_customer_CS_FirstName | NONCLUSTERED COLUMNSTORE|
+| employees  | emp_id       | PK_employees_A4YSE64B8 | CLUSTERED |
+| orders     | order_id     | PK_orders_A4YSE64B8 | CLUSTERED |
+| products   | prod_id      | PK_products_A4YSE64B8 | CLUSTERED |
+
+
+If we have large schema and lot of indexes, we would make a flag in order to understand whether we have duplicates or not? and that we can do by calculating the number of rows of unique table name and index name. We can do that very easily using the window function.
+
+```sql
+SELECT
+    tbl.name AS table_name,
+    col.name AS index_column,
+    idx.name AS index_name,
+    idx.type_desc AS index_type,
+    COUNT(*) OVER( PARTITION BY tbl.name, col.name ) column_count
+FROM sys.indexes idx
+JOIN sys.tables tbl ON idx.object_id = tbl.object_id 
+JOIN sys.index_columns ic ON idx.object_id = ic.object_id AND idx.index_id = ic.index_id
+JOIN sys.columns col ON ic.object_id = col.object_id AND ic.column_id = col.column_id
+ORDER BY column_count DESC
+```
+| table_name | index_column | index_name | index_type | column_count |
+|------------|--------------|------------|------------|--------------|
+| customers  | country      | idx_customer_cs_country | NONCLUSTERED COLUMNSTORE |  2 |
+| customers  | country      | idx_customer_country | NONCLUSTERED | 2 |
+| customers  | first_name      | idx_customer_FirstName | NONCLUSTERED  | 2 |
+| customers  | first_name      | idx_customer_CS_FirstName | NONCLUSTERED COLUMNSTORE| 2 |
+| customers  | cust_id      | PK_customer_A4AE64B8 | CLUSTERED | 1 |
+| customers  | country      | idx_customer_countryScore | NONCLUSTERED | 1 |
+| employees  | emp_id       | PK_employees_A4YSE64B8 | CLUSTERED | 1 |
+| orders     | order_id     | PK_orders_A4YSE64B8 | CLUSTERED | 1 |
+| products   | prod_id      | PK_products_A4YSE64B8 | CLUSTERED  | 1 |
+
+</details>
+
+<details>
+  <summary> 4. Update Statistics </summary>
+
+One more thing in order to maintain our indexes is by updating the statistics. The database Engine usually use statistics in order to understand which index should be used for our query and if these statistics are not upto date SQL will be going to make wrong decisions.
+
+Let's see we have created a table and start inserting the data to this new table. <br/>
+Now the database Engine will go and create your new table and insert the new data. <br/>
+Behind the scene, the database engine will create a new table statistics It's like metadata information about our data that's like a report or insights about our table where we can find a lot of information like num of rows, distribution of values in a column, num of distinct values, histogram, patterns and many more info about our table.
+
+Now the question is why do we have those information in our database?
+
+Imagine that we're doing select from where, what is going to happen is database engine has to go and create an execution plan. We will learn about this later in details. It is just a roadmap on how to execute this query.
+So, here in this example in order to load the data from the table, there are different ways on how to do it. like table scan, index scan, index seek. So that means here database engine has three different ways on how to do it.
+
+In order for database engine to decide which way to use, DB Engine will go and read statistics of the table. So it will go and collect information. Like how many rows do we have, are the information unique? how  is the distribution of data and so on.
+
+Based on those statistics and numbers the database Engine can make a good decision about which method to use in order to load the data. <br/>
+e.g. : Index Scan is best to load this table.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/f41b8dc7-7ef0-4361-bc74-67626110f591" />
+
+
+This is exactly why database needs the statistics in order to make the correct decision and to use the correct index.
+
+Que : This is something internal for the database. Why do we have to care about it? <br/>
+Ans : Well, there is an issue. <br/>
+Let's say in table we have 50 rows and next day we inserted the data to this table like 1 million rows. 
+Now the issue that could happen with that is the statistics will not get updated about this table and statistics can still say that we have only 50 rows. Which means statistics of this table is outdated. <br/>
+Big issue is that once we query this table, the SQL Engine don't know at all about the 1 milliom rows that we have inserted in the table bcuz It will go and ask the statistics and statistics is outdated. So, It will shows only 50 rows and DB Engine will think okay this is small table, let's go with index scan and that's the bad decision taken by DB Engine due to outdated statistics.
+
+Now our task is to monitor those statistics and to keep updating them. <br/>
+Let's see how we can do that.
+
+1st thing we have to do is that find out whether our statistics are upto date or outdated. In order to do that we have to access metadata about our database and for that we have tables and dynamic management functions in the system schema where we can find a lot of details about the statatistics.
+
+In order to monitor the statistics, we have to prepare query like  :
+```sql
+SELECT
+     SCHEMA_NAME(t.schema_id) AS schema_name,
+     t.name AS table_name,
+     s.name AS statistic_name,
+     DATEDIFF(day, sp.last_updated, GETDATE()) AS last_update_Day,
+     sp.rows AS 'Rows',
+     sp.modification_counter AS modification_since_last_update
+FROM sys.stats AS s
+JOIN sys.tables t ON s.object_id = t.object_id  
+CROSS APPLY sys.dm_db_stats_properties(s.object_id, s.stats_id) AS sp
+ORDER BY sp.modification_counter DESC
+```
+Here we can see all the informations like table_name, statistic names etc etc. It is important when the last time statistics get updated, modifications etc.
+
+
+
+</details>
+
+<details>
+  <summary> 5. Monitor Fragmentations </summary>
+
 
 </details>
 
