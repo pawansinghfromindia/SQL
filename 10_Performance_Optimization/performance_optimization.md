@@ -800,6 +800,10 @@ Now we want to them based on storage, the best will be rowStore table, then Heap
 </details>
 <!---------------Clustered ColumnStore Indexes------------------>
 
+<!----------index i.e. based on storage------------------->
+
+**Unique Index**
+
 <details>
   <summary> <b>Unique Index </b> </summary>
 
@@ -814,11 +818,314 @@ What is an **unique Index** ?
 > 1. To have **Data Integrity**. So, Unique Index enforce uniqueness in our data and that is very helpful. e.g. if we have a column like email_address or a product_id, having duplicate these columns can mess up data very badly.
 > 2. To **improve performance**. e.g. if we're searching for specific email, the SQL start searching for the email value and once the SQL find the value, SQL will stop searching because we're sure that there is no duplicate data. So with that we're improving the performance of our queries. So, if you're creating an idex and you know this column is unique then make sure index as unique index.
 
+If we have to look our clustered index again where we have the B-Tree structure, Here If we make the index as unique then we are giving the extra task for SQL that make sure all those ids of the customer table will going to be unique. So, Now SQL has the gurantee that there are no duplicates at all inside the data in the data-pages.
 
- 
+<img width="500" height="300" alt="image" src="https://github.com/user-attachments/assets/b9abaf2a-172c-4aea-99f9-44fc0d39f5fd" />
+
+
+Since we're giving SQL an extra task to prove the uniqueness of the data, building the clustered index will become little bit slower. That means INSERTING/WRITING new data is going to be slower as compared to normal clustered index. But READING performance will be optimize and little bit faster than normal clustered index.
+
+Basically, in this trade off, we're making writing data slower but we're gaining more speed on the reading data. This is what we mean by Unique Index.
+
+**Performance**
+> - Writing to an unique index is slower than non-unique.
+> - Reading from an unique index is faster than non-unique.
+
 </details>
 
-<!----------index i.e. based on storage------------------->
+<details>
+  <summary> Syntax of Unique Index </summary>
+
+```python
+CREATE [UNIQUE] [CLUSTERED | NONCLUSTERED] [COLUMNSTORE] INDEX index_name ON table_name (col1, col2, ...)
+```
+If we don't specify the ```UNIQUE```, the default is normal index which allows duplicates.
+```sql
+CREATE INDEX Idx_Customers_Email ON Sales.customers (email);
+```
+If we specify the ```UNIQUE```, the duplicates are not allowed.
+```sql
+CREATE UNIQUE INDEX Idx_Customers_Email ON Sales.customers (email);
+```
+
+```sql
+SELECT * FROM Sales.products
+
+CREATE UNIQUE NONCLUSTERED INDEX idx_product_category ON Sales.products (product_category);
+--get an error bcuz category has duplicates. SQL can't create unique index for this table.
+--We can create an unique index on an empty table, but SQL will not allow us to insert any duplicate in the column that table has.
+-- Of course It doesn't make sense to have unique index on column category bcuz category itself says duplicates.
+
+CREATE UNIQUE NONCLUSTERED INDEX idx_product_id ON Sales.products (product_id);
+--It will work bcuz we don't have any duplicates inside the product_id
+```
+> **Rule : Duplicates in the column will prevent creating a unique index.**
+
+Now we can go and check Object Explorer > Database > table > Indexes > unique non-clustered index
+
+Let's check Data Integrity. Are we allowed to add any duplicates in this table based on product_id.
+```sql
+INSERT INTO Sales.products
+VALUES (105, "Gloves", "Clothing", "30")
+--Error we cvan't insert duplicate key bcuz we have unique index
+-- As we can see Unique index is helping us and improving the quality of table.
+```
+| Product_id | product | category | price |
+|------------|---------|----------|-------|
+| 101        | Bottle  | Accessories | 10 |
+| 102        | Tire    | Accessories | 15 |
+| 103        | Socks   | Clothing    | 20 |
+| 104        | Caps    | Clothing    | 25 |
+| 105        | Gloves  | Clothing    | 30 |
+
+</details>
+
+<!----------Unique Indexes------------------->
+
+**Filtered Index**
+
+<details>
+  <summary> <b> Filtered Index </b> </summary>
+
+> **An index that includes only rows meeting the specified conditions**.
+
+A filtered Index is a regular index but with a twist. It only includes the rows that meet specific condtions.
+
+We have our non-clustered index and B-Tree structure. <br/>
+Now at the leaf nodes we will het only the Ids the data that fulfill a specific condtions. <br/>
+For example if we're saying we want only active customers, this is the condition.
+So, that means on the leaf node we will have only the customer_ids that are active and any inactive customer will be not included at all at the data-page and at the nodes. <br/>
+So, Our B-Tree structure is going to be little bit smaller as usual bcuz we have less data included in the structure. So, Index is going to be samller than the regular non-clustered index. <br/>
+
+<img width="500" height="300" alt="image" src="https://github.com/user-attachments/assets/d05b0f99-d383-4dce-8f7b-3749faf643cd" />
+
+
+Que : **Why is it important to have a filtered Index ?** <br/>
+Ans : Well, bcuz filters index benefits is :
+- **Targeted optimization** : e.g. if our analysis is always focus on the active users and inactive users are totally irrelevent. That means having only relevant subset of data in the dex makes the whole index much smaller which leads to faster performance. Here, We're doing targeted optimization and improving the query performance.
+- **Reduce Storage : Less data in the index** : Since the size of B-Tree is going to be smaller that means we need less storage space in order to store the index which is a great thing if we have large tables in the database, and that's bcuz we're filtering the irrelevant data. 
+
+Basically Filtered Index is going to make the structure of the index smaller which is going to improve the speed and performance and as well reduce the storage that is need for the index.
+
+</details>
+
+<details>
+  <summary> Syntax of Filtered index </summary>
+
+Filtered Index Syntax :
+```python
+CREATE [UNIQUE] [NONCLUSTERED] [rowstore] INDEX index_name
+ON table_name (col1, col2, ...)
+WHERE [condition]
+```
+
+> **Rule 1. : You cannot create a filtered Index on a clustered Index** bcuz it make no sense if we create a clustered index, the entire table should be re-organize and ordered. and We need only subset of data
+
+> **Rule 2. : You cannot create a filtered Index on a columnStore Index** bcuz It make no sense as we need all the columns by filtering out the rows.
+
+We can combine the ```UNIQUE INDEX``` together with the ```FILTERED INDEX```. There is no restrictions. 
+
+```sql
+SELECT * FROM Sales.customers
+WHERE country = 'USA';
+
+CREATE NONCLUSTERED INDEX Idx_Customer_country ON Sales.customers (country)
+WHERE country = 'USA';
+--Index will be build that will be focused & targeted only for subset of data.
+-- Duplicates are allowed
+
+CREATE UNIQUE NONCLUSTERED INDEX Idx_Customer_id ON Sales.customers (id)
+WHERE status = 'Inactive' 
+--Duplicates are not allowed as It is filtered + unique
+```
+Open Object Explorer > database > Table > Indexes > Filtered Index which can be normal or unique both
+
+Here, in this filter query if we use ```SELECT * FROM Sales.customer WHERE country = 'USA';``` It will work with faster speed, But ```SELECT * FROM Sales.customer WHERE country = 'Germany';``` The query will perform slow as all those rows inside this query is not part of Filtered Index. So, filtered index will be not used here.
+
+</details>
+
+<!----------Filtered Indexes------------------->
+
+<details>
+  <summary> <b>How to choose the Right Index ? </b> </summary>
+
+How to use the right index? <br/>
+
+| When to use which index |
+|-------------------------|
+
+**HEAP**
+> Fast **INSERTs** for staging and temporary tables.
+
+Heap Structure, It is a table without any index, So in this scenario we don't have to use any indexes. <br/>
+In case if we want to have fast inserts/Write performance then don't take any index. Stay with default with the heap structure of table. <br/>
+Usually we use it in not very important table like staging tables or temporary tables where we want to insert the data fast and then get rid of the data later on. So, there is no need to utilize any index.
+
+**Clustered Index**
+> for **Primary Keys** if not, then for date columns.
+
+> When we say CLustered Index that means **CLustered RowStore Index**
+
+> RowStore Clustered Index -> OLTP (Online Transactions Processing, e.g. : Banking, eCommerce Sales, Logs etc)
+
+Clustered Index, we use Clustered Index for **Primary Keys**. <br/>
+It is even a default from the database,if we create constraints like primary keys on table then SQL will create clustered Index. This is the main usage of Clustered Index.
+
+If there is no primary key on our table, then we can pick another column where sorting the data is important like e.g. a date column, It could be good candidate for our clustered Index.
+
+
+**ColumnStore Index**
+> For **Analtical** Queries and to Reduce size of Large data.
+
+> ColumnStore Index -> OLAP (Online Analytical Processing e.g. : Data WareHouse, Complex Data Analysis & Reporting, Business Intelligence etc ) 
+
+If we have like big complex analytical queries where we are aggregating a lot of data doing data-aggregations then we have to go for Column Store Index. Because It gives us amazing performance.
+
+As well as if we're struggling with the size of tables like we have a huge super large table then we can use the ColumnStore Index. Because It compress the data and reduce the size of whole table.
+
+**Non-Clustered Index**
+> For **non-Primary Key** columns like (Foreign Keys, Joins and Filters)
+
+We usually use Non-Clustered Index for non-Primary Keys columns. That means except primary key columns rest al of the columns could be candidate for non-clustered index.
+
+There are a lot of reasons why we would do that. e.g. ```Foreign Keys``` or using it on the columns that are used in order to ```JOIN``` two tables or columns that are used for the filters like ```WHERE``` clause.
+
+So, There are many scenarios where we can use the Non-Clustered Index but Not for the Primary keys.
+
+**Filtered Index**
+> Target **Subset** of data and Reduce size of the index
+
+We use filtered Index in order to target a subset of data. So if in our query or analysis we're only focusing on a subset of data all the time , It makes no sense to have one big index for all the data, here we can use the filter index to have focused and target subset of data.
+
+Of course if the size of the index is a problem then we can use a filter index in order to reduce the over all size of the storage of the index.
+
+
+**Unique Index**
+> Enforce **Uniqueness** and Improve Query Speed
+
+We can use the Unique Index in order to ensure Data-Integrity of our table. As well it might improve  slightly the performance of our query and that's bcuz SQL has less task to do if the index is unique. Once SQL Engine find a match, It will skip the search.
+
+This was the quick summary and guide on when to use which index type that helps in finding the right index.
+
+</details>
+
+<details>
+  <summary> <b>Index Management and Monitoring </b> </summary>
+
+- We have created our indexes in our database, our query is optimize and we have now fast performance. But the job is not done yet.
+
+- Bcuz over the time indexes get fragmented, outdated and unused. This leads to a poor performance in queries and also increase the storage cost. So, Overall performance of our database is going to drop down.
+
+- So, Indexes are like having a car, It need maintenance. So, We need to change oil, tyre and do servicing of the car. Same thing goes for indexes. We have to maintain them. They need attention to keep everything running smoothly.
+
+Let's see How we should manage, maintain and monitor the indexes we have created on our tables inside database of our project.
+
+|**INDEX MANAGEMENT**          |
+|------------------------------|
+| 1. Monitor Index Usage       |
+| 2. Monitor Missing Indexes   |
+| 3. Monitor Duplicate Indexes |
+| 4. Update Statistics         |
+| 5. Monitor Fragmentations    |
+
+1st and most important task is **to monitor the usages of our indexes**. <br/>
+We have to ask ourself over the time : <br/>
+"Are we really using the indexes that we have created?" <br/>
+"Are they really helping in improving the speed or performance of our queries?" <br/>
+"was It just a good idea to create indexes at start of the project and later no one is using those indexes?" <br/>
+
+This is very crucial because if we're having unused indexes, So They are consuming unnecessary storage spaces as well as Write/Insert performance in the table is slow.
+
+So, now task is to find out the usage of each index that we have created? <br/>
+How we can do that? <br/>
+So, We have created multiple indexes on the table. <br/>
+Go to Object Explorer > Database > Tables > Indexes > here you will find all the indexes on the table.
+Now we can see all those informations by using a special Stored Procedure provided by the SQL Server called **```sp_helpindex```**. 
+- It is a system stored procedure that comes with the database.
+- This stored procedure only need only one value and that is the table name.
+
+```sql
+--List all indexes on a specific table
+sp_helpindex 'Sales.customers';
+```
+| index_name | index_description | index_keys |
+|------------|-------------------|------------|
+| idx_Customer_countryScore | nonclustered located on PRIMARY | country, score   |
+| idx_Customer_custFirstName| nonclustered columnstore located on PRIMARY | NULL |
+| idx_Customer_FirstName | nonclustered located on PRIMARY | first_name |
+| idx_Customer_LastName | nonclustered located on PRIMARY | last_name |
+
+index_name is the name of index which we provided while creating the indexes. <br/>
+Primary is the name of the file group where the data is stored. As a default indexes are stored as Primary. <br/>
+Index_keys is nice information to understand which keys are used or columns for the index. 
+
+Our task is how to monitor the usage of Indexes.
+In databases we have a lot of schemas and tables that has protocol the metadata of our database. And in SQL Server we have a special we have a special schema called **```Sys```** System Schema.
+
+> **```Sys``` System Schems** : contains metadata about the database tables, views, indexes, desc, columns etc.
+```sql
+--Monitor Index Usage
+SELECT * FROM sys.indexes;
+
+SELECT
+    tb.name AS table_name
+    idx.object_id,
+    idx.name AS index_name,
+    idx.type_desc AS index_type,
+    idx.is_primary_key,
+    idx.is_unique,
+    idx.is_disabled
+FROM sys.indexes idx
+JOIN sys.tables tb
+ON idx.object_id = tb.object_id
+ORDER BY tb.name, idx.name
+```
+We get a huge list of all the indexes that we have and a lot of information for each index. We don't have have to understand each column. We just have to focus on main important informations from this table.  
+
+Now we don't want the object_id, instead we need full_name of the table and there are a lot of indexes in the result are irrelevant for our database. So in order to get full_name and filter the table, we have another metadata table ```sys.tables```so join it with ```sys.indexes```.
+
+Now We have only required columns and rows. with this we have a nice list of all indexes that are created on our tables inside database of our project.
+
+We're not done yet, our task is how to monitor the usage of Index? <br/>
+In order to get the usage for each of those indexes, we have a special view called **dynamic management view** and there SQL Server provide a lot of statistics about the usage of the index.
+
+> **Dynamic Management View (DMV)** : provides real-time insights into Database performance and system health.
+
+```sql
+SELECT * FROM sys.dm_db_index_usage_stats
+```
+Here we will have information about indexes how many time it updated, scans, seeks, when was last usage of index etc.
+
+Let's integrate this view ```sys.dm_db_index_usage_stats``` with the ```sys.index``` and ```sys.tables``` in query.
+
+```sql
+SELECT
+    tb.name AS table_name
+    idx.object_id,
+    idx.name AS index_name,
+    idx.type_desc AS index_type,
+    idx.is_primary_key,
+    idx.is_unique,
+    idx.is_disabled,
+    dmv.user_seeks,
+    dmv.user_scans,
+    dmv.user_lookups,
+    dmv.user_updates,
+    dmv.last_user_seek,
+    dmv.last_user_scan,
+    COALESCE(dmv.last_user_seek, dmv.last_user_scan) AS last_update
+FROM sys.indexes idx
+JOIN sys.tables tb
+ON idx.object_id = tb.object_id
+LEFT JOIN sys.dm_db_index_usage_stats dmv
+ON dmv.object_id = tb.object_id AND dmv.object_id = idx.object_id
+ORDER BY tb.name, idx.name
+```
+Here, we're doing left join otherwise if we do inner join, we will only get used indexes but we need full build of all of our indexes in the database.
+
+Why we
+
+</details>
 
 <!---------------Indexes------------------>
 
@@ -829,7 +1136,7 @@ What is an **unique Index** ?
 <!----------------Partitions----------------->
 
 
-# 10.3 Performance Tips
+## 10.3 Performance Tips
 
 <details>
   <summary> <b>Performance Tips </b> </summary>
