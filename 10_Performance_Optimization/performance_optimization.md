@@ -1311,14 +1311,576 @@ JOIN sys.tables t ON s.object_id = t.object_id
 CROSS APPLY sys.dm_db_stats_properties(s.object_id, s.stats_id) AS sp
 ORDER BY sp.modification_counter DESC
 ```
-Here we can see all the informations like table_name, statistic names etc etc. It is important when the last time statistics get updated, modifications etc.
+| schema_name | table_name | statistics_name | last_update | last_update_day | rows | modification_since_last_update |
+|-------------|------------|-----------------|-------------|-----------------|------|--------------|
+| Sales       | Customers  | _WA_Sys_000001_6EF57B66 | 2026-10-19 29:39:08.324 | 4  | 5 |  15      |
+| Sales       | Customers  | _WA_Sys_000001_6EF57B66 | 2026-10-19 29:45:08.324 | 4  | 5 |  15      |
+| Sales       | Customers  | _WA_Sys_000001_6EF57B66 | 2026-10-19 29:48:08.324 | 4  | 5 |  15      |
+| Sales       | Customers  | _WA_Sys_000001_6EF57B66 | 2027-10-19 29:59:08.324 | 4  | 5 |  15      |
+| Sales       | Products   | idx_products_prod_name  | 2026-12-31 19:46:08.324 | 3  | 5 |  2       |
 
+Here we can see all the informations like table_name, statistic names etc etc. It is important when the last time statistics get updated, modifications etc. <br/>
+Here, we have multiple statistics on one table, one for the table itself and one for each index that we have in the table.
 
+Let's update statistics only for one, not everything.
+```sql
+UPDATE STATISTICS Sales.customers _WA_Sys_000001_6EF57B66;
+```
+If we want to update the all statistics, It's not like we have to update it one by one. We can do that in one go.
+```sql
+UPDATE STATISTICS Sales.customers;
+```
+Here, SQL will all the statistics that belongs to the table customers.
+So, Now we can go and check the statistics using the above query.
+
+There is one more way, in which we can update the statistics of the whole database instead of each table or each index. But be aware, this might take really long time. <br/>
+We can do that by executing a special stored procedure ```sp_updatestats```
+```sql
+EXEC sp_updatestats;
+```
+
+**Updating Statistics**
+
+How we usually do it in project ? 
+
+**1. Weekly job to update statistics on weekends** <br/>
+where update the whole database statistics. with that we make sure all of our tables and indexes having upto date statistics. Of course, if we have a small databases, we can run it like every day. but if we have huge database it will take long time then obviously we can schedule at weekends.
+
+**2. After Migrating Data** <br/>
+If we know that in the project that there will be a lot of new incoming data, something kind of data-migration. So, we will have to update the statistics after the data migration is done. Just to make sure we have upto date statistics.
+
+This is how we monitor and update the statistics in the database.
 
 </details>
 
 <details>
   <summary> 5. Monitor Fragmentations </summary>
+
+This is the final task in order to monitor and manage the indexes to monitor the index fragmentations.
+
+Over the time as our data is inserted, updated and deleted into our our tables, indexes can become fragmented.
+
+What is **Fragmentation** ?
+> - **Unused spaces in data-pages**
+> - **Data pages are out of order**
+
+It means like there is un-used spaces in our database and the database is not filling them or our data is not anymore sorted correctly in the index. <br/>
+Of course, this leads to ineffiecient use of the storage as well as slow down the query performance.
+
+In SQL, in order to get everything organize again, we have 2 methods :
+
+**1. Reorganize**
+- Defragments leaf nodes to keep them sorted.
+- "Light" Operation
+
+It is very light operation and it will not block the user from using the tables.
+It will go and defragment the leaf level of the index in order to get it organize and sorted again with the logical order.
+
+**2. Rebuild**
+- Recreate Indexes from scratch
+- "Heavy" Operation
+
+This method is heavy weight operation. It is going to drop the whole index and re-created it from the scratch.\
+This means not only the data get sorted again but as well the fragmentation inside our data-pages and index going to be eliminated
+
+Let's see how we can do that in SQL.
+
+Do we have an issue with the fragmentations in indexes?
+- So, we have to check the health of our indexes in the database.
+- In order to do that we have to check in system metadata and check dynamic management functions.
+- There is a special function ```sys.dm_db_index_physical_stats``` in order the get that answer in SQL Server.
+```sql
+SELECT *
+FROM sys.dm_db_index_physical_stats(DB_ID(), NULL, NULL, NULL, 'LIMITED')
+```
+| database_id | object_id | index_id | partition_num | index_type_desc | ..... |avg_fragmentation_in_percent |
+|-------------|-----------|----------|---------------|-----------------|-------|-----------------------------|
+| 6           | 338100255 | 0        | 1             | HEAP            |       | 0                           |
+| 6           | 1200557933| 1        | 1             | CLUSTERED INDEX |       | 0                           |
+| 6           | 1200557933| 2        | 1             | NONCLUSTERED INDEX|     | 0                           |
+| 6           | 1200557933| 2        | 1             | NONCLUSTERED INDEX|     | 0                           |
+| 6           | 1301579675| 2        | 1             | NONCLUSTERED INDEX|     | 0                           |
+| 6           | 1509580416| 1        | 1             | CLUSTERED         |     | 0                           |
+| 6           | 1861581670| 4        | 1             | HEAP              |     | 0                           |
+
+We have so many information out here, but the most important is **avg_fragmentation_in_percent**.
+
+> **avg_fragmentation_in_percent** : Indicate how out-of-order pages are withon the insex.
+> - This columns gives us the degree of fragmentation in our one index.
+> - **0% means no fragmentation (perfect)**, our index is very healthy.
+> - **100% means index is completely fragmented (out of order)**, we have to do something about it.
+
+How to identify which object it does and which index? <br/>
+For that we have to join few tables like ```sys.tables``` and ```sys.indexes``` in order to get those informations.
+
+```sql
+SELECT
+    tbl.name AS table_name,
+    idx.name AS index_name,
+    s.avg_fragmentation_in_percent,
+    s.page_count,
+FROM  sys.dm_db_index_physical_stats(DB_ID(), NULL, NULL, NULL, 'LIMITED') AS s
+INNER JOIN sys.tables AS tbl ON s.object_id = tbl.object_id
+INNER JOIN sys.indexes AS idx ON s.object_id = idx.object_id AND s.index_id = idx.index_id
+ORDER BY s.avg_fragmentation_in_percent DESC
+```
+Here, we're sorting the data with avg_fragmentation_in_percent ain desc bcuz we're interested in high percentage.
+
+| table_name | index_name | avg_fragmentation_in_percent | page_count |
+|------------|------------|------------------------------|------------|
+| customers  | NULL       | 0                            | 1          |
+| customers  | PK_customer_A4AE64B    | 0                | 1          |
+| customers  | idx_customer_cs_country| 0                | 0          |
+| customers  | idx_customer_cs_country| 0                | 0          |
+| customers  | idx_customer_cs_country| 0                | 0          |
+| customers  | idx_customer_country   | 0                | 1          |
+| employees  | PK_employees_7A4E64B   | 0                | 1          |
+| products   | idx_products_country   | 0                | 1          |
+
+**When to Defragment ?**
+- if fragmentation between 0 - 10%  -> No action needed
+- if fragmentation between 10- 30%  -> Reoraganize method in order to sort the data again.
+- if fragmentation between 30- 100% -> Rebuild the whole index bcuz not only data is in wrong order but also there are unused spaces in database in indexes.
+
+Let's say one of those indexes name 'idx_customer_cs_country' has 15% fragmentation. So what we have to do here is re-organize this index.
+```sql
+ALTER INDEX idx_customer_cs_country ON Sales.customers REORAGANIZE;
+```
+Based on the table size this query will take time, after this query ran, if you check again the fragmentation will be 0.
+
+Let's say we have another index where the fragmentation is around like 50%. So, what we have to do here is to re-build this index.
+```sql
+ALTER INDEX idx_customer_country ON Sales.customer REBUILD;
+```
+With this command run, the SQL will drop the whole index and create it from scratch and this is usuallly takes more time than re-organize of course.
+Now after the command ran, if you check the fragmentation, you will see it will be 0.
+
+This is how we make our index healthy and remove the fragmentations from our index.
+
+As we can see, improving the performance of our queries doesn't end by creating them. It's all about staying pro-active. So, monitor the usage of indexes, check whether there are any missing indexes, check for any duplicates indexes, always make sure the statistics of the database are upto date and keep your eyes on the fragmentation and make sure we have healthy indexes.
+
+With that we have learned how we manage and monitor the indexes once we create them.
+
+
+</details>
+
+<details>
+  <summary> What is <b>Execution Plan </b>? </summary>
+
+Let's say we have a large complex analytical query and it involves a lot of joins, aggregations, filters and so on. But It is slow. <br/>
+Of course we will want to optimize the performance of the query by may be using indexes. <br/>
+Que is where exactly we go and build the indexes on which table on which columns? <br/>
+That means we have to understand where exactly the problem is. <br/>
+- Is it by joining table?
+- Is it by sorting data?
+- Is it by filtering data?
+- Is it by aggregations?
+
+In order to answer all those questions, we have something called **Execution Plan**.
+
+What is **Execution Plan** ?
+> Roadmap generated by a database on how it will execute your query step by step.
+
+The execution plan shows us how the database exactly process our query step by step. And this is what we need.
+
+It is going to show us where exactly we have a performance issue. In other words, the execution plan is like windows on how the SQL database thinks. And once it understand that then it is going to make right decisions on building an index.
+
+Let's understand what this exactly means?
+
+- Imagine we're doing a query like SELECTing FROM table and the JOINing the data with another table.
+- Once we execute the query the database engine will not go immediately and start fetching the data from the disk but instead first SQL Engine has to make a plan.
+- It's like we're planning a trip where we check the Google Map in order to find the best route in order to reach the destination and execution does exactly the same thing.
+- The DB Engine has first to plan how to execute the query and this plan is build step by step based on the our query as well as the statistics.
+
+First Step is How to get the data from the tables, for that there are multiple ways like **Scan Index,  Full table scan** then it will decide which type of JOIN is going to apply like **Hash Join, Loop Join** and then at the end of this plan is going to be the SELECT statements.
+
+once the execution plan is ready, the Database Engine is going to start implementing the steps. So, DB will will start reading the table from the disk and then after it will join the table and then select the columns and at the end send the result to the end user.
+
+Now once everything is done, the Database Engine will do one more thing, It will go and take this execution plan and store it at the cache and that's because the database Engine can re-use  this plan if we have similar query. <br/>
+e.g. : If we go and execute the same query again, the DB Engine will understand okay this is the same query I have already built an execution plan for that. So It will go and check the cache and It is way faster to get it imediately from the cache instead of building it. So, in this scenario the DB Engine didn't make any decision It simply go and get the plan for cache and start immediately executing the plan.
+
+<img width="500" height="350" alt="image" src="https://github.com/user-attachments/assets/0bda4fa6-a05e-472a-9cf2-41549439e8d8" />
+
+
+Of Course Database Engine will not hide the execution plan from the users. We can go and check it.
+We can check How the database Engine loaded the data, how they're joined and so on. And then we can make a correct decision on how to optimize query may be by adding the indexes.
+
+Let's see How we can we do that?
+
+</details>
+
+<details>
+  <summary> Execution Plan Basics </summary>
+
+We work with a database > table > index | clsutered rowstore index on primary key means Data is tructired in B-Tree.
+
+Let's create a mirror of the table without any index.
+
+```sql
+SELECT *
+INTO Sales.fact_retailer_sales_heap
+FROM Sales.fact_retailer_sales;
+```
+Now, we have created a table from an existing table which has primary key that's why clustered index on it. But now we have the new table which doesn't have any index on it. So, It is basically a Heap table.
+
+Let's do a simple query on top of our newly created heap table
+```sql
+SELECT *
+FROM Sales.fact_retailer_sales_heap
+```
+Now if we want to see the execution behind the above query? How can we do that? 
+- in order to see execution plan of it. We have a toolbar : 3 things out there.
+  1. Display estimated execution plan
+  2. Include actual execution plan
+  3. Include live query statistics
+
+What are the differences between 3 of them? <br/>
+
+> **Estimated Execution Plan** : predicts the execution plan without actually running the query.
+
+In diplay execution plan, what happens is SQL will go and guess the execution plan without executing the query.
+So, It's just an estimation. It's only a guess.
+
+> **Actual Execution Plan** : shows the execution plan as it occured after running the query.
+
+In actual execution plan is used in order to process the query, after executing the query, SQL will shows off which plan is used. <br/> 
+
+> **Live Query Statistics Execution Plan** : shows the real-time execution flow as the query runs.
+
+here, we will get the real time execution of the query and we can see how execution plan is working.
+
+That means Estimated Plan is something before executing the query and Actual plan is something after executing the query and the third one is while executing the query i.e. Live Query execution plan.
+
+Let's try out **Estimated Execution Plan** on the query by simply going to toobar and select estimated executipn
+```sql
+SELECT *
+FROM Sales.fact_retailer_sales_heap
+```
+There we will see a new output where we can see table scan box. This is estimated execution plan without executing the query.
+
+Now if we go to the toolbar and switch to the actual execution plan. Nothing is going to happen bcuz first we have to execute the query. <br/>
+here we will get the results, messages and a new tab called Execution plan. So, if you open the execution plan tabl you will find the real execution plan which is used to process the above query.
+
+Similarly try out the 3rd one i.e.  Live Query statistics, there once you run the query a new tab will come named Live Query Statistics, there you can how the data and plan is working during the execution.
+
+Why do we have Estimated and Actual Plan ?
+- Well, It is really nice tool to understand whether everything like is healthy at our database bcuz if guesiing is something else that of actual execution plan that means It indicated something is wrong.
+
+> If the predictions don't match the Actual Execution Plan, this indicates issues like inaccurate statistics or oudated indexes, leading to poor performance.
+
+Now, Let's focus on only one type of execution plan that is Actual Execution Plan.
+- what we can do, open 2 queries side by side one from the clustered indexs that is B-Tree structire and another from without index that is heap structure
+```sql
+SELECT *
+FROM Sales.fact_retailer_sales_heap;
+
+SELECT *
+FROM Sales.fact_retailer_sales
+```
+Let's try to read Actual Execution plan for both query.
+
+let's see the first query, which is based on table which doesn't have any index that is heap structure.
+- Que is how to read this execution plan?
+- Well, It is very simple because we have a very simple query.
+- We read it from **Right to Left** So, first operation is table scan, then very small arrow indicates the next i.e SELECT.
+- So, 1st operation is how to read your data from the table. Here we have different types of scans one of them is table scan.
+
+**Table Scan**
+> Table scan Reads the entire table, page by page and row by row "everything" which can lead to slower query on large tables.
+
+- Now we go and mouse hover on the table Scan, you will find a lot of details about what is happening during loading the data or scanning the table. But it is little bit annoying so better option is we can right click on it go to properties, here you can see in right side same details but it is easier to read.
+- The first thing we have to read is the number of rows that has been read. so, you can see there you have read all the rows inside the table which is not really good. we have another good information about the resources and the cost, we have CPU cost, input output cost and what is interesting is the logical operator the table scan which shows nice information about the storage, it says it is row store.
+
+Now let's see another execution plan of another table which has index due to primary key so it has clustered index and thus B-Tree structure.
+- Let's execute the query and see the actual execution plan, Here we don't have table scan where we have something called **clustered index scan**
+
+**Index Sacn**
+> Index scan scans all the data in an index to find the matching rows.
+
+It is either scanning the entire table again or only a range or a part of the index.
+
+In the details we can see whether it reads all the information or not?
+
+now if we check the number of rows again the whole index is read in order to get this result. So as we can see all the details like logical operators and it is clustered index scan. It is not a table scan. We can go and check CPU, Input output cost whether we're consuming the same efforts or not.
+
+</details>
+
+<details>
+  <summary> Execution plan <b>Heap vs Clustered Index </b> </summary>
+
+```sql
+SELECT *
+FROM Sales.fact_retailer_sales_heap;
+ORDER BY sales_order_number;
+
+
+SELECT *
+FROM Sales.fact_retailer_sales;
+ORDER BY sales_order_number;
+```
+Now check the execution plan for both the query.
+
+1st Heap Structure, we can see here 2 steps : first scan whole table and then we have sort operator in order to sort all the data to present it in the output. and At the end we have SELECT.
+
+If you go to B-Structure Clustered Index, we have only 2 steps, there is no sort step and that's bcuz the clustered index is already sorted and SQL don't have to go and sort the data.
+
+So, first win is if we have an index, so everything is sorted and if we have order by on a column in query then SQL don't have do it during the query.
+
+If you want to compare the Clustered Cost like CPU, Input Output it is same but in Heap structure the cost of it is increase in sorting the data. So, It is consuming more CPU, Input and Output  and we summarize it the Heap table query is going to be slower than that of B-Tree Structured Clustered Index query.
+
+> **Sorting Data** : Heap is slower than Clustered, bcuz Database must perform extra work to sort rows.
+
+With that we can understand the exactly the benefits of index.
+
+So, in execution plan we can find which index has been used in our query and this is very important to if we create a new index then run your query and check whether the database is using you new created index or not and if it's not using that means you're making a wrong decisions about your index.
+So, each time you create an index make sure to check whether in execution plan, the database is using the newly created index or not.
+
+> **Tip** : After Creating a new index, check the execution plan to see if your query uses the index or not
+</details>
+
+<details>
+  <summary>Execution plan <b>Non-Clustered Index </b> </summary>
+
+Now instead of using the primary key which is a clustered Index, We're now going to use non-clustered index by applying the filter based on the column on which index has been created.
+
+```sql
+SELECT *
+FROM Sales.fact_retailer_sales_heap
+WHERE carrier_tracking_num = '4911-403C-98';
+
+SELECT *
+FROM Sales.fact_retailer_sales
+WHERE carrier_tracking_num = '4911-403C-98';
+```
+Now we execute these two queries and see the actual execution plan, we will see that we still have table scan on heap table.
+
+Now create a non-clustered index on the table which has the primary key and clustered index.
+```sql
+SELECT *
+FROM Sales.fact_retailer_sales_heap
+WHERE carrier_tracking_num = '4911-403C-98';
+
+CREATE NONCLUSTERED INDEX idx_fact_retailer_sales_ctn ON Sales.fact_retailer_sales_heap(carrier_tracking_num);
+```
+Now again execute the query on this table and see whether our query is using the index which we created on this or not.
+```sql
+SELECT *
+FROM Sales.fact_retailer_sales_heap
+WHERE carrier_tracking_num = '4911-403C-98';
+```
+When we see the actual execution plan of this query, it is completely different than that of peimary key clustered index. we can see we have something new, we don't have the clustered index. We have something new called **Index Seek**
+
+**Index Seek**
+> Index Seek is a targetet search within an index, retrieving only specific rows.
+
+Index Seek is an amazing sign in our execution plan bcuz it tells us that SQL Server did find the way to use the index in order to find the exact data that we need without sacnning a lot of stuffs.
+
+Now as we learned, We have 3 types of scans :
+1. **Table Scan** : Reads every row in a table, where SQL go and scan the whole table, this can happen in the heap structure.
+2. **Index Scan** : Reads all entries in an index and fins result, here we don't know whether it is scanning the whole index or a part of the index.
+3. **Index Seek** : Quickly locates specific rows in an index, where the database is able to find directly the data without scanning a lot of stuffs.
+
+So, the worst type is **Table Scan** then we have **Index Scan** and the best one is **Index Seek**
+
+So, if you check the details in query actual execution plan, you will find the number of rows read in only 12 in the case of the Index Seek as we have an non-clustered index on the table. on the other hand in the case of without any index heap table, we have read around 60K rows in order to get the specific row. This is amazing and very fast!. Also the cost of CPU, Input output is very cheap. and if we go and see in the object which index has been used of course the column name on which we have created the non-clustered index.
+That's means It was a really good decision to create this index and SQL used it in order to fast finding our data.
+
+Let's check rest of the execution plan, next is Key Lookup, **Key Lookup is an operation that we need in order to get the rest of the column** because from this index we're getting the data of only one column the carrier_tracking_number but since in our query we're selecting all the columns where for specific carrier_tracking_number. so we have a lot of columns and those columns are not part of the index. so in this index SQL don't know anything about rest of the columns. That's why SQL has to go and search for the other columns. So, SQL will call a look up not the scan. That's why we have we also have only 12 rows. But from this steps we will get rest of the columns.
+
+Now the next step is that SQL will go and join those two information, we have the 1st one carrier_tracking_number and second one we have the rest. Of course the SQL has to go and merge all those stuffs in one in order to have it in result. Now this operation called a **Nested Loop**. Behind the scene there are diffefent different types of joins not the one that we know like INNER,LEFT,RIGHT,CROSS etc.
+
+**Join Algorithms**
+
+> **Nested Loops** : Compare tables row by row; best for small tables 
+
+> **Hash Match** : Matches rows using a hash table; best for large tables
+
+> **Merge Join** : Merge two sorted tables; efficient when both are sorted 
+
+So, if we get a lot of data from the index and look ups and you see SQL is using the Nested Loop this is not good. But for now It's okay because we're getting only 12 rows and operation is going to be fast enough.
+
+One more thing that we can see in our execution plan is the **Cost in percentage**. So, from checking this execution plan, we can see the select is costing nothing, The cost of the nested loop is 0% and then cost of index seek is like 6% that's bcuz It is pretty fast and most expensive operation that is done in our query is key lookups of course bcuz we have to go and get all the columns.
+
+Now we compare this non-clustered index to heap table even though the execution plan of the heap structure looks very small doesn't mean that it is faster than the indexes that we have. <br/>
+Still we go and add up all those numbers it is way way faster than the heap structure.
+
+If you want to get rid of the key Lookup, in the query you can only select the carrier_tracking_number column then there is no need for Key lookup bcuz we're not selecting all those columns. We have only one column which we are getting from the index on which we created.
+
+So, We see here, It is interesting to understand how SQL is working with our table and index.
+This is how we validate whether we are making the correct decisions about the indexes we created!
+
+</details>
+
+<details>
+  <summary>Execution Plan <b>RowStore vs ColumnStore </b></summary>
+
+Let's see to do more stuffs like aggregation, Joins and and so on in the query and see How SQL creates execution Plan for it.
+
+```sql
+SELECT
+    p.prod_name AS productName,
+    SUM(s.sales_amount) AS totalSales
+FROM Sales.fact_retailer_sales s
+JOIN Sales.dim_product p
+ON s.prod_key = p.prod_key
+GROUP BY p.prod_name
+```
+Run this query and let's check the execution plan of this. Here we have a lot of stuffs:-
+Let's see it from the Right to Left Side
+- first thing SQL will do is get the data from the fact table. So it is using the clustered Index
+- Then after that SQL will do hash match for Aggregation
+- Then after that SQL will sort the data bcuz it is doing later a merge join
+So, all those steps are preparing the fact table and
+
+- then We have another clustered Scan for the dimension table. So, SQL will go and select the information from the dimension and we have here like not a lot of rows so It's very small table 600 rows.
+- Of course the result of the Cluster Scan is as well sorted, as we know clustered index is going to sort the data.
+- So, we have a sorted output together with another sorted output.
+- As we have two data sets that are sorted now SQL decided to go with merge join which is a good join in order to join 2 sorted datasets. It is way faster than joining the nested loop. So eveything is fine.
+- So, data is sorted and presented at the output.
+
+Now if you check the execution plan, you will see the most expensive thing happens at fact table. 71% of the total cost happened in this step.
+
+Now let's say the query is slow and now we would like to go and optimize it.
+
+We have learned that if we're doing aggregations on big tables then the columns store index is a good idea.
+So, let's go and find whether this is true or not?
+
+As our fact table is heap structured let's convert it to column store stucture.
+```sql
+CREATE CLUSTERED COLUMNSTORE INDEX idx_fact_retailer_sales_hp ON Sales.fact_retailer_sales_heap;
+```
+Now our table is not anymore heap structure. It will be now columnstore index.
+If we check the info about this table, we have clustered ColumnStore index on it.
+
+Now let's run the same query and check whether we have better performance than the last time on not?
+```sql
+SELECT
+    p.prod_name AS productName,
+    SUM(s.sales_amount) AS totalSales
+FROM Sales.fact_retailer_sales_hp s
+JOIN Sales.dim_product p
+ON s.prod_key = p.prod_key
+GROUP BY p.prod_name
+```
+Now run the query and see the actual execution plan of this and check it from the Right to left side.
+So. we have first see the fact table and now it is costinng only 6% which was earlier costig 70% when the table was heap structure. that's bcuz the physical operation is a columnstore index scan. If we go to Objects section, SQL did use the ColumnStore that's of course bcuz whole data is only stored in the index. So, there is no other way around it.
+
+Now we can go and compare the CPU cost, It is like 0.0067 and almost same cost for input and output when we compare it with the previous execution plan where we don't have columnStore index on our fact table. There you can see it is way more expensive to reading the fact table than columnstore. also It reduces the input output cost.
+
+So, as we can see we went from 71% of total cost for fact table to onlt 6% and the resoources that is used to execute the query it is way less than a normal cluster rowStore.
+This is exactly the power of ColumnStore Index, we can use the columnStore index on big tables like fact table here for getting amazing performance.
+
+So, This way we compare execution plan first run the query and go to toolbar then select the execution plan type in one tab for one query and another tab for another query.
+
+Now there is another way to compare the execution plan, go to execution plan then right click on it and then go to save execution plan as, name it and save on the local machine. and again go to the second execution plan, right click on it, then compare show plan, once you click on that you hav to select the one that you want to compare it with which you saved locally. Open it, now on top you hve a query and at the bottom you have the execution plan thar you have saved and then you have lot of info where you can compare both of the execution plans with that you can understand which execution plan is better.
+
+As we can see, Having the execution plan is amazing, we can see how the SQL is working behind the scenes :
+- we can understand How SQL is processing the Query step by step?
+- How much resources query is consuming?
+- Whether our indexes is useful or useless?
+- We can experiment stuffs like add index, then test whether we gained performance or not?
+- We can compare multiple execution plan before and after until we get the right index for the right table and right column.
+
+So, Execution plans are amazing in order to help us understanding whether our indexing strategy is correct or not?
+
+</details>
+
+<details>
+  <summary>SQL Hints </summary>
+
+So far, we have learnt that SQL Server makes its own decisions on how to execute the queries? <br/>
+And SQL makes those plans based on Statistics but sometime the plan that we're getting from the database might be not the best one for our query. There could be many reasons why this could happen.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/d6fe16da-24be-4677-8107-28944cd23fd0" />
+
+**Bad Execution Plan!** could be due to : 
+1. Outdated Statistics, which makes DB Engine to take wrong decisions
+2. Too many indexes, which makes DB Engine confused
+
+That's why here, we need **SQL Hints**
+
+**SQL Hints**
+> Commands you add to a query to force the database to run it in a specific way for better performance.
+
+We can use SQL Hints in order to command to force the SQL Database on how exactly our SQL Query should be executed. So, We can intervene and change the steps in the execution plan.
+
+Let's see how we can do that :
+```sql
+SELECT
+     o.sales,
+     c.country
+FROM Sales.orders o
+LEFT JOIN Sales.customers c
+ON o.customer_id = c.customer_id
+```
+If we execute this query and check the execution plan of it, we can see in the execution plan it is using the clustered index in order to read the data from the orders and customers tables. And then it is using the nested loop in order to do the joins.
+
+Now let's suppose our tables are really huge but still the SQL is using the nested loop, of course this is not good for large huge tables. And may be SQL is confused with the indexes ans statistics and so on. It decided to use that the nested loops. <br/>
+Now in order to force SQL  to use another type of join we can go and give a hint in our query for the SQL to use different type for the join. That's we can do by at the end of Query ```OPTION ()```
+
+```sql
+SELECT
+     o.sales,
+     c.country
+FROM Sales.orders o
+LEFT JOIN Sales.customers c
+ON o.customer_id = c.customer_id
+OPTION (HASH JOIN)
+```
+Now we have our query and at the end we're giving the database a SQL hint for the execution plan.
+
+Now run the query, check the execution plan, you can see, SQL is using different type of joins.
+So, with that we're intervening in the execution plan and we're making choices.
+That's how we changed the technicality on how the SQL is joining those two tables.
+
+Now let's change something else. like instead of having index scan, we would like to have a index seek.
+So, if we have right index in the table, we can go and tell SQL how to read the data in the table.
+Let's do that, currently we have index scan on the table customers. So we can go and say to SQL ```WITH ()``` in query
+```sql
+SELECT
+     o.sales,
+     c.country
+FROM Sales.orders o
+LEFT JOIN Sales.customers c WITH (FORCESEEK)
+ON o.customer_id = c.customer_id
+--OPTION (HASH JOIN)
+```
+Here, we can use the keywords like WITH FORCESEEK near the table in order to specify the SQL how to load the data. If we don't specify anything that means we're counting on the execution plan that is generated ffrom the SQL. but if you don't want the SQL recommendations, we can specify and hint the SQL which one should be used.
+
+If we don't have the INDEX SEEK which we are specifying on our table then SQL will throw the error bcuz we're using HASH JOIN as well. Let's comment it then execute.
+Now it runs successfully. go to execution plan, you will see nested loop but when you go to customer table there you can see it is using the index seek, so it is not anymore using index scan. Here again we're intevening and forcing SQL to use the methods that might be better for our query.
+
+Now if you're creating a lot of indexes on one table, and the SQL is still not targetting the right index, for that when you check the object you will see it is targetting the specific index but if you have better index than that, you can give a hint for SQL to use a specific index and we  can do that like this.
+```sql
+SELECT
+     o.sales,
+     c.country
+FROM Sales.orders o
+LEFT JOIN Sales.customers c WITH (INDEX (PK_customer_AA45B5T666))
+ON o.customer_id = c.customer_id
+```
+Execute this query and go and check the execution plan, you can see it is targetting the hinted index provided in the query.
+
+So, not only we can force SQL for a specific type of loading or joining or we can aslo force SQL to use a specific index that we created.
+
+As we can see SQL hints are very powerful, but we have to be very careful with them bcuz we can have a bad experience using them in project.
+So, Recommendation for the SQL Hint is :
+
+**Tips for SQL Hints**
+
+> 1. Test hints in all project environment (Dev and Prod) as performances may vary.
+
+- If you hint is working fine in one env that doesn't means it will work in another env that's bcuz production might have huge datasets
+
+> 2. Hints are quick fixes (workaround not solution). You still have to find the cause and fix it.
+
+ - Don't use hint as permanent fix for your query, like let's say in your project one of your query is very slow, if it's not clear why the execution plan is really bad then we can use SQL Hints as a workaround in orderto speed up the query but still have to invest and spend time in order to analyse the root cause for permanent solution.  
+
+So SQL Hints are really amazing in order to control the execution plan, but use it very carefully and only if there is like an emergency.
+</details>
+
+<details>
+  <summary> <b>Indexing Strategy </b> </summary>
 
 
 </details>
