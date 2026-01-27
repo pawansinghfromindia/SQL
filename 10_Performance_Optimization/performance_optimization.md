@@ -1671,7 +1671,7 @@ WHERE carrier_tracking_num = '4911-403C-98';
 When we see the actual execution plan of this query, it is completely different than that of peimary key clustered index. we can see we have something new, we don't have the clustered index. We have something new called **Index Seek**
 
 **Index Seek**
-> Index Seek is a targetet search within an index, retrieving only specific rows.
+> Index Seek is a targeted search within an index, retrieving only specific rows.
 
 Index Seek is an amazing sign in our execution plan bcuz it tells us that SQL Server did find the way to use the index in order to find the exact data that we need without sacnning a lot of stuffs.
 
@@ -1713,6 +1713,9 @@ This is how we validate whether we are making the correct decisions about the in
 
 <details>
   <summary>Execution Plan <b>RowStore vs ColumnStore </b></summary>
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/b4323a01-d899-410f-89ce-96f76ee3fb98" />
+
 
 Let's see to do more stuffs like aggregation, Joins and and so on in the query and see How SQL creates execution Plan for it.
 
@@ -1878,19 +1881,206 @@ So, Recommendation for the SQL Hint is :
 
 So SQL Hints are really amazing in order to control the execution plan, but use it very carefully and only if there is like an emergency.
 </details>
+<!---------------Indexes------------------>
+
+**Indexing Strategy**
 
 <details>
   <summary> <b>Indexing Strategy </b> </summary>
 
+For each SQL data project we have to make sure that we create a clear guidance about the index strategy. 
+
+Everyone in the team has to commit and follow the strategy in order to make sure that each index that is created in the project to fulfill the purpose and that's because without a clear strategy about the indexing, there will be a lot of redundancies, unused indexes, waste of storage and the whole system of our project is going to be slow and bad.
+
+Let's see the Indexing Strategy that experts follow in projects. There is no one strategy that can fit any project that's why each project's team should brainstorm in order to make strategy regarding their own project.
+
+
+**The Golden Rule**
+
+**Avoid over Indexing** : Slows performance | Confuse Execution Plan So, ***Less is more***
+
+- Over Indexing is the biggest mistake and trap that a lot of developers do where they think adding more indexes that sounds like we're speeding up things But this leads to opposite of it you know why that's bcuz each time we add a new data to table, index on this table has to get updated, sorted, rearranged and so on that means having too many indexes, makes write operation like insert, update, delete will be slow means our database is slower and not faster.
+
+> ***INDEXES SLOW DOWN WRITE PERFORMANCE*** when data is inserted, updated or deleted, database has to update indexes.
+
+- One more very important reason why over indexing is bad is we're making the database confused while creating the execution plan. As we know SQL database has to create the best execution plan for the query and if we have a lot of indexes in our database, it is going to make the process of creating execution plan complicated for the database, which makes database harder to choose the best path and index which opens the door for bad execution plan which means it slow down the query
+
+> ***TOO MANY INDEXES CAN CONFUSE EXECUTION PLAN***, increase planing time, choose a suboptimal plan.
+
+This is the 1st statement in Indexing Strategy
 
 </details>
 
-<!---------------Indexes------------------>
+We can split the **Indexing Strategy** into 4 phases. <br/>
+Each phase has multiple steps.
 
-## 10.2 Partitions
+<details>
+  <summary> #1 Phase : Indexing Strategy <b>Initial Strategy</b> </summary>
+
+First Step is create an initial indexing strategy. <br/>
+Once we start a new SQL Project we have to define the objectives of the project very clearly. <br/>
+What we're focusing on, what we want to achieve?
+
+> **WHAT IS THE MAIN GOAL OF OUR INDEXING STRATEGY**
+
+In order to define the goal of our indexing strategy, we have to understand our system.
+
+We have mainly 2 types of databases :
+
+1. **OLAP** Online Analytical Processing
+- The purpose of this database is for **Data Analytics**
+- Goal : optimize READ performance
+Example : ***Data WareHouse*** (DWH), in data warehouse we ***extract*** the data from multiple sources then we prepare it, ***tranform*** it and ***load*** it in one big storage, we call this process an ***ETL***. Then comes ***Frontend***, where we have ***Reports and DashBoards***  where the data is ***summarize***, ***aggregated*** and ***presented*** before the end user. 
+
+<img width="300" height="200" alt="image" src="https://github.com/user-attachments/assets/68a6348f-6ff5-4beb-aa6a-279423a1a32b" />
+
+
+These reports could be used from users in order to analyze and have insights about the data. <br/>
+
+In order to generate those reports, there will be like heavy reading on the data warehouse database. That means there will be huge queries will access the database in order to aggregate and prepare the data for the ***Visualization***
+
+<img width="287" height="126" alt="image" src="https://github.com/user-attachments/assets/db71965e-d75a-478c-bb2c-1fd2a4938ea0" />
+
+
+2. **OLTP** Online Transaction Processing
+- eCommerce, Finance, Banking etc where tractions happens frequently
+- Goal : optimize WRITE performance
+It is like eCommerce, Finance, Banking etc. We have at the ***Backend*** a database where the data is stored and on the ***frontend*** we have applications for the end users. As users are interacting with the app, there WRITE operations on the database like inserting the data, updating the data or deleting the data and also READ operations on the database in order to show the data in the app. So, We have both WRITE and READ.
+
+<img width="251" height="127" alt="image" src="https://github.com/user-attachments/assets/7e36a876-f284-4c39-8815-e5109f956260" />
+
+**Two strategies : optimize ***READ*** performance and optimize ***WRITE*** performance**
+
+In OLAP, we have to understand the project, where is the struggle, sometime ETL process itself is slow and mainly ETL is writing data from the sources in the data warehouse and may be we have a scenario where it takes everyday 6-10 hours, which is a problem bcuz we can't wait so long in order to get new fresh data to the Reports everyday.
+
+So, Here we can make the goal of project is to optimize the WRITE performance, we want to speed up the ETL. But actually most of the big projects have another issue READ operation on the data warehouse, bcuz data warehouse normally have really big datasets and at the frontend, the reports generate the large complex queries on the database. So READ operations becomes pain point in each OLAP System.
+
+So, normally the goal in each OLAP System is How to optimize the READ performance.
+
+But in OLTP System, we have different nature/scenario of database. Here in OLTP, we don't have big queries from the Apps through users. Here we have many tractions, many queries happening between the application and database. Basically we will have massive amount of READ and WRITE transactions. So, the whole time we're reading and writing on the database.
+
+On the other hand in OLAP, we have something like Bigger and Slower bcuz in the ETL, we usually run it only once, meaning Writing only once new data into the database which usually happens during non-business working hours generally in night.
+
+Again we have to understand the nature of the database. Usually in OLAP System has data model where we have a very big fact tablesand around the fact table, we have multiple dimensions tables that are connected to the fact table. Those facts tables are really big huge tables in the database and each time they used in order to build a report and Reports are generated everytime using to those big facts tables for Visualizations. 
+
+There a lot of aggregation queries run on the facts tables. <br/>
+So, here we have a question which type of index should be used in this scenario ?
+- Well, we have a perfect index for this and that is **ColumnStore Index**. So best practice or strategy here is for whole project where OLAP design, we should make all facts tables are columnStore index bcuz this is what we needed in OLAP.
+
+
+On the other hand OLTP system uses completely different data model, where we have a lot of tables and of different sizes. And There're a lot of relationship between all those tables. 
+- Here, most of the tables are completely connected. So a lot of **Primary Key**, **Foreign Key**, **Relationship between them**.
+- Normally all those tables in OLTP system are **normalize tables**. Like they're small connected unlike in OLAP where we have **de-normalize tables**.
+- So, Here in OLTP, we can follow one strategy is that we create **Clustered Index** for each primary key of our tables which improve a lot of stuffs like Searching, Sorting and Joining tables.
+- But of course, since we're focusing on optimizing the WRITE performances on OLTP, we  have to be more carefult and senstive by adding indexes compared to OLAP, bcuz each index we add it could be reason why the data is writen very slowly. **could drop down WRITE Operation performance**.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/5961440b-b6f5-49f5-8f8b-a9e0b4d8eb50" />
+
+
+As we can see, we have to understand the nature of project, issue in the project. Once we understood the project, we can define goal for optimizing the system like either READ or WRITE or both of them with that we're making initial strategy of Indexing our system.
+
+</details>
+
+<details>
+  <summary> #2 Phase : Indexing Strategy <b>Usage Patterns Indexing</b> </summary>
+
+In the phase 1, we have initial strategy for our indexing and a rough plan. <br/>
+In the next phase which is Phase 2, we have **Usage Patterns Indexing**.
+
+Here, we deep dive into projects details and **Indentify the frequently used tables and its columns**. That means we have to check all the queries used in project in order to understand what is **Most Important Table** that is used in many queries like one table is fact_sales. Basically we are developing and finding a pattern of most important tables which are used frequently. Not only that also focusing on how we're filtering the data, aggregating the data or joining the data in queries like which are the **Most Important Columns** like order_date column.
+
+Of course, we can take help from LLM Models like chatGPT by giving them prompt and our query. <br/>
+Prompt :
+"Analyze the following SQL queries and generate a report on table and columns usage statistics. For each table, provide:
+-The total number of times the table is used across all queres. <br/>
+-A breakdown of each column in the table, showing : The total number of times each column appears. <br/>
+The primary purpose of the column's usage (e.g. : filtering, joining, grouping, aggregating).<br/>
+Sort the tables in descending order based on their total usage." 
+
+So, after identifying the frequently used most important tables and their columns, next step is to **Choose the Right Index type** which depends on usages and scenarios like what we have leaned before.
+
+<img width="652" height="347" alt="image" src="https://github.com/user-attachments/assets/c5a48d87-a28e-492f-89ee-61d3e9f9b814" />
+
+and the last step in this phase is to **Test Index** whether everything is working fine.
+
+</details>
+
+<details>
+  <summary> #3 Phase : Indexing Strategy <b>Scenario-Based Indexing</b> </summary>
+
+Here, in this phase we have to tackle and focus on the specific issues to specific pain points. That means we have to first **Identify the Slow Queries**. It could be reported from the users or teams who are doing analysing the logs to understand which queries are causing the performance issues.
+
+Once we get the list of slow queries, then we have to analyze them one by one. So, It is the time to **dig into Execution Plan**. As we learn we can check how SQL is implementing our queries in Execution plan and start looking for the areas where SQL is doing a full scan of tables, or using expensive operations like nested loop joins and so on.
+
+Once we understand where is exactly the pain point or performance issue. The next point is to **Choose the right index**. which type of index is best suited for optimized the query. Once we create the index the last step is to **Test the indexes** which are created is working fine on not to make sure query is using this particular index or not? basically compare the Execution Plan before and after. If there is no benefit of using the index you created then something is wrong, here you have to investigate more and analyze the query and choose better index type.
+
+We have to do this process for each slow query until we get all queries faster performance.
+
+Of course, Don't forget **Indexing is not the only way/method to how to optimize the speed of a query!**
+
+As we can see till three phases, we went from a very generic methods on how to index our system to something very specific scenario based. Here as we are moving in the next phase we're doing more deep dive into project details.
+</details>
+
+<details>
+  <summary> #4 Phase : Indexing Strategy <b>Monitoring and Maintenance</b> </summary>
+
+As we know job doesn't stop by just creating and implementing the best suited indexes. We have to be responsible by keeping eyes on the health of indexes we created.
+
+Here, Database offeres a lot of statistics and metadata about our data that we can used to monitor and maintain our indexes health. So, first step is to **Monitor the usage of Indexes**. As we know we can use the Dynamic Management View or functions that we can find in System Schema where we can see the number of usage of each index and when the last time our query did use which index in order to find out the heal of indexes we created.
+
+Next step is we can **Monitor the missing Indexes**. Here, we can check what are the recommendations from the database where the database is reporting missing indexes from  the execution plan. Again here we can use the those Dynamic Management Views and functions  in order to see more details about missing indexes.
+
+Also we have to **Monitor Duplicate Indexes** whether there are duplicates indexes present or not bcuz this happens due to in a team multiple developers works parallelly and created multiple indexes to optimize the query performance. If there are duplicates we have to consolidate and delete them.
+
+Then next step is to **Update Statistics**. As we know statistics are very important for the Execution Plan bcuz the database engine uses those information in order to decide the best execution plan for the query. If there is old statistics then database engine can make wrong decisions about how to execute the query which might lead to bad performance.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/f839f561-b5c8-49cc-8392-a983adceff2c" />
+
+Here, again we have special functions in order to monitor the statistics But Recommendation is to each weekend have a job to go and create all the statistics of our database.
+
+And last step is to don't forget about **Monitoring Fragmentations**. As we know if any modifications on the table, the order to the databases could get wrong or there are like free spaces on the data-page that are not used. That means we have fragmentations in the indexes. So, we have to monitor the fragmentations of each table and if it is greater than 10% then there is an issue.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/42613bb0-6dbb-42e1-b24d-78c8dc13bb24" />
+
+Usually for Monitoring as a Data Engineer, we generally build a dashboard in PowerBI or Tablue where we extract all those metadata and create a nice dashboard in order to monitor the health of the database. And we can buy some other tools that are advanced  in order to do these stuffs.
+
+</details>
+
+<details>
+  <summary> Summary of Indexing Strategy </summary>
+
+This was the indexing strategy that developers usually follows in projects.
+As we can see each phase builds upon the previous one. moving from a general strategy to more targeted, refined and specific strategy where we first **define the goal of indexing strategy** of the project and as we move from phase to phase we're going, **targeting more specific scenarios** This cycle is keep repeating, until our goal is still suitable for project. Wee have to keep analysing frequently used columns and tables, keep searching and finding those slow queries and always keep an eye by monitoring the indexes. And Keeping all these in mind, Avoid over indexing. 
+
+<img width="500" height="300" alt="image" src="https://github.com/user-attachments/assets/d8aa4f01-39d7-4384-a00d-f3ef16ee86cd" />
+
+
+</details>
+
+
+Now we know everything about Indexing in SQL. <br/>
+Now, there is another important technique on How to optimize the performance i.e. Partitions : How to divide our data in order to optimize the performance.
+<!---------------Indexing Strategy------------------>
+
+## 10.2 SQL Partitions
+
 <details>
   <summary> <b>Partitions </b> </summary>
+
 </details>
+
+<details>
+  <summary> <b>
+  </b> </summary>
+
+</details>
+
+
+<details>
+  <summary> <b> </b> </summary>
+
+</details>
+
 <!----------------Partitions----------------->
 
 
