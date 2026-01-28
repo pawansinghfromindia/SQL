@@ -2065,29 +2065,470 @@ Now, there is another important technique on How to optimize the performance i.e
 ## 10.2 SQL Partitions
 
 <details>
-  <summary> <b>Partitions </b> </summary>
+  <summary> What is <b>SQL Partitioning </b>? </summary>
+
+**SQL Partitioning**
+> Divides a Big Table into Smaller Partitions while still being treated as a single logical table.
+
+It is a technique in order to divide large table into small pieces. And each piece we call it as **Partition**.
+
+This sounds like we're dividing one big table into smaller tables but It's not like that We're just dividing one table into smaller partitions. Basically we're having only one solid table  but behind the scene it's splitted into multiple partitions.
+
+Let's understand what does Partioning of table means?
+- We have a table in our database and over the time it is gettting bigger and bigger where we have millions of rows.
+- Once we have sug big table, what happens is everything will be slow on this table like READING or WRITING or EXECUTION PLAN does full scan of the table will take long time, if we create INDEX on this table what will happen is It will create a very big B-Tree structure where there are a lot of branches, leaves, data-pages and so on. And having a big index is not good bcuz insert, update, delete operations take long time to process. So only having a big index doesn't mean have a good performance on big table.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/c33ffd76-0b14-4839-a48a-4f5e3fb1a592" />
+
+
+**What we can do in order to optimize the performance of a big table?**
+- Well, We can use SQL Partitioning, in order to do that we have to understand the behavior and transactions that are happening on our table. What usually happen with the big table is, it grows over time. Like we have subset of data of 2023, another subset of data of that is created or updated in 2024, 2025 and then 2026 and so on. 
+
+- That means in the table we have old as well as new data, and we usually interact with new data more often compare to old data. e.g. for 2023 data, only read transaction operation, for 2024 2 reads and one write operations, for 2025 more than 2 reads and 2 writes operations but for new data of current year, there will be heavy read and write (insert,update,delete) transaction. So a lot of things are going on for new latest data that means we're accessing frequently the big table only to interact with new data, rarely need the old data.
+
+<img width="481" height="270" alt="image" src="https://github.com/user-attachments/assets/080844e7-7ac9-4fb7-93d9-05f92191bb88" />
+
+
+So, to increase the performance of the big table, what we can do is divide this big table and we usually divide it by date. So, That means we split the big table by the year and we put each year in one partition. So At the end we have like three partitions.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/f1d3043d-cfb8-49bd-97c9-8b1fd3c2e86b" />
+
+Now, It's important to understand that those are 3 partitions, they are not 3 tables. That means at the client side the users can see only one table but behind the scenes we have like 3 partitions of it. 
+
+Let's say, we have a query in order to read the data of 2025, what is going to happen is SQL will not scan all the data from the table (full table scan) rather it will only target one partition that is of 2025. That means SQL is only scanning the relevant informations, the relevant partitions and not the entire table 
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/b3ed4bf3-b4a5-4578-9e48-b112fffc57a4" />
+
+We have another benefits of having partitions in table is like If we're using a modern database like Azure Synapse which supports the **parallel processing**. So, If we have infrastructure for parallel processing, what's going to happen is Database Engine can process each partition of table independently and parallelly. So, whether we're READing or WRITing data, SQL will process the queries parallelly which reduce overall execution time. <br/> 
+
+So, if you have a modern infrastructure like Azure Synapse, always go with table partitions bcuz the partitions could be stored in different servers which helps SQL Engine to use all the resources at once parallelly. 
+
+Basically Partitions allows SCALABILITY as well as PARALLEL PROCESSING. 
+
+Partitions makes Indexing more efficient. So, Instead of having one big index for the whole table, if we put index on a partition table, what is going to happen is Each partition gets its own index, which means the size of the indexes is going to be smaller. This helps in searching for data as well as extending the index itself. 
+e.g. If we're inserting data to the partition 2025, the SQL will not change the whole table index rather it will only change the index of partition of 2025. That's the power of partitioning It improves significantly the performance of our table whether we are reading or writing data to the big table.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/9627ac29-1a69-486a-945a-b0c2eee861e9" />
+
+This is what we means by Table Partitioning and why we need it.
 
 </details>
+<!------------------------------------------>
+Here, we will see the process of creating partitions in SQL. <br/>
+At the start it might sounds little bit complicated but we will see it step by step.
 
+We have 4 steps because in the database there are multiple layers. <br/>
+Let's see how we can do that ?
+<!------------------------------------------>
 <details>
-  <summary> <b>
-  </b> </summary>
+  <summary> Building Partitions <b>#1 Create Partition Function</b> </summary>
+
+First step is to define a **Partition Function**.
+> Define the logic on how to divide your table data into **Partitions**! Based on the **Partition Key** like (Column, Region, ...)
+
+We usually use column with date like year wise, month wise or in the other scenario like Region wise, Country wise and so on. But most famous is on date that's bcuz table gets bigger over the time.
+
+There are multiple types of function. We will focus on **range function**. 
+
+**How does Partition Function work?** <br/>
+We will have a **range of dates** and then we have to **define boundary values**. <br/>
+Let's say we would like to make a partition for each year and in order to do that we have to define the partition boundary. It is like a value, the boundary of the years could be first day of the year or last day of the year. <br/>
+Let's take boundary of the year as last day of the year. So last day of the year 2023 is '2023-12-31', and '2024-12-31', '2025-12-31'. we call these values as boundary of our function. <br/>
+Now, Between the boundaries, we will have partitions. e.g. : All the rows 2023 and earlier is partition 1 after that between two boundaries we have partition 2 , partition 3 and so on. and then between last boundary and evrything onwards is partition 4, here we have all the rows 2026 onwards.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/7a14917c-c80c-4054-ab33-3f2d0b9b271a" />
+
+With that we have now logic and we tell SQL how to divide our table data into multiple Partitions.
+
+Here, There are 2 methods **Left** and **Right**.
+
+So, we have boundaries and queestion is which partition does this boundary belongs to ? Partition 1 or Partition 2. That's why we have 2 methods.
+- When we say **LEFT** that means the boundary belongs to Partition 1.
+
+<img width="200" height="100" alt="image" src="https://github.com/user-attachments/assets/2c798232-67ca-434e-abbd-23c6a49e48cb" />
+
+
+- When we say **RIGHT** that means the boundary belongs to Partition 2.
+
+<img width="200" height="100" alt="image" src="https://github.com/user-attachments/assets/6504e442-253d-4d90-a683-7188db32aefb" />
+
+So, We have to decide whether we want the boundary belongs to left partition or to right partition.
+
+Let's implement it in SQL.
+```sql
+-- Step 1 : Create a Partition Function
+
+CREATE PARTITION FUNCTION partitionByYear (DATE)
+AS RANGE LEFT  FOR VALUES ('2023-12-31', '2024-12-31', '2025-12-31');
+
+```
+So, we created this Patition function which split the data using range left. <br/>
+Remember this function is not attached to any table yet. It is just a logic that is stored in the database.
+
+Since this partition function is stored in the database, we will have metadtata about those functions stored in the system schema, there we have a dedicated table called ```sys.partition_functions``` and there we can find information about all partition functions that we have created inside our database.
+```sql
+-- Query list all existing Partition Functions
+SELECT
+     name,
+     function_id,
+     type,
+     type_desc,
+     boundary_value_on_right
+FROM sys.partition_functions
+```
+Here, we can find the partition functions which we created.
+It is recommended to check before creating any partition function in the system schema of partition function which resides in the database.
 
 </details>
-
-
+<!------------------------------------------>
 <details>
-  <summary> <b> </b> </summary>
+  <summary>Building Partitions <b>#2 Create Filegroups</b> </summary>
+
+Next Step in our process. We can build now the filegroups.
+
+What is **Filegroups** ?
+> Logical container of one or more data files to help organize partitions.
+
+- It is like a logical container of one or more data files.
+-  It's very simple like folders. So we can create multiple folders so that later we can insert inside them files.
+-  This is really nice because It gives us like freedom and flexibility where we can go and decide How the data files are organize for each partitions.
+-  So, what we usually do is create a file group for each partition. like we have 4 folders and 4 file groups for 2023, 2024, 2025, 2026 and so on.
+
+<img width="500" height="250" alt="image" src="https://github.com/user-attachments/assets/2db6ebaf-8371-4ee3-ac99-1dc00cdad6f5" />
+
+Let's do that in SQL 
+```sql
+-- Step 2: Create Filegroups
+
+ALTER DATABASE SalesDB ADD FILEGROUP filegroup_2023; 
+ALTER DATABASE SalesDB ADD FILEGROUP FG_2024; 
+ALTER DATABASE SalesDB ADD FILEGROUP FG_2025; 
+ALTER DATABASE SalesDB ADD FILEGROUP FG_2026; 
+```
+Here, we created 4 file groups and they are empty as of now. If made any mistakes in making them we can simpley delete them and create once again.
+```sql
+ALTER DATABASE SalesDB REMOVE FILEGROUP filegroup_2023;
+ALTER DATABASE SalesDB ADD FILEGROUP FG_2023;
+```
+Let's check whether eveything is created correctly or not like any duplicate or anything wrong.
+```sql
+-- Query lists all existing Filegroups
+SELECT *
+FROM sys.filegroups
+WHERE type = 'FG'
+```
+Here, we will get the filegroups which we have created but One more file group that is **PRIMARY**.
+
+> **PRIMARY** is a Default Filegroup where all objects of database is stored.
+> - It is created for each database.
+> - Basically It is a container of all data files in our database. as we can see it's is_default flag is 1 which means it is created by default. 
+
 
 </details>
+<!------------------------------------------>
+<details>
+  <summary>Building Partitions <b>#3 Create Data Files</b> </summary>
+
+Moving on the 3rd step, where things get more physically. <br/>
+So far we have like a function and file groups and all those stuffs that are logical. But we don't have any data yet.
+
+In order to have data, we have to create **Data Files**.
+- As we know Data Files contain our actual data and they are stored physically in the database.
+- So, we can assign data for each filegroup or multiple filegroups.
+- The file format here is ***ndf***. It is secondary data files.
+
+We have 2 formats of data files : Primary data files and Secondary data files.
+
+But for Partitions we usually use Secondary data files format.
+Again file groups are logical container and data files are physical files where actual data is stored inside it.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/cd64519f-63fa-4f67-8388-fd4168087b51" />
+
+Let's create data file in SQL
+```sql
+-- Step 3: Add .ndf files to each Filegroup
+
+ALTER DATABASE SalesDB ADD FILE
+(
+  NAME = P_2023 --logical Name of file
+  FILENAME = 'C:\Program Files\Microsoft SQL Server\MSSQL16SQLEXPRESS\MSSQL\DATA\P_2023.ndf'
+                       --Physical path and name of file
+) TO FILEGROUP FG_2023
+```
+Note : We have to give SQL not only the name, but the physical place of the files.
+- First define the logical name, It is not the file name, it is the logical name of the file.
+- Next is give the physical name of the file together with the path. We have define the complete path of the file for SQL. In SQL Server, there is like a default path where the data is stored and we have to used the same path. The path reallly depends on version and type of SQL Server. So, the current version you are using you can get that from the folder where you install SQL Server. like 'C:\Program Files\Microsoft SQL Server\MSSQL16SQLEXPRESS\MSSQL\DATA\'
+- there we can find all the database files eg: salesDB, logs, xyz.mdf, xyz.ldf etc. So, we can put all our partitions file here as well inside the default folder. But for the real Project we have to ask the DBA about the exact location where we can put our partitions 
+
+With that we created a file inside a filegroup. Generally we don't create multiple files inside one file group. It is recommended to be like one to one.
+
+So, we create the other files for each filegroup for each each.
+```sql
+ALTER DATABASE SalesDB ADD FILE
+(
+  NAME = P_2023 --logical Name of file
+  FILENAME = 'C:\Program Files\Microsoft SQL Server\MSSQL16SQLEXPRESS\MSSQL\DATA\P_2023.ndf'
+) TO FILEGROUP FG_2023;
+
+ALTER DATABASE SalesDB ADD FILE
+(
+  NAME = P_2024 --logical Name of file
+  FILENAME = 'C:\Program Files\Microsoft SQL Server\MSSQL16SQLEXPRESS\MSSQL\DATA\P_2024.ndf'
+) TO FILEGROUP FG_2024;
+
+ALTER DATABASE SalesDB ADD FILE
+(
+  NAME = P_2025 --logical Name of file
+  FILENAME = 'C:\Program Files\Microsoft SQL Server\MSSQL16SQLEXPRESS\MSSQL\DATA\P_2025.ndf'
+) TO FILEGROUP FG_2025;
+
+ALTER DATABASE SalesDB ADD FILE
+(
+  NAME = P_2026 --logical Name of file
+  FILENAME = 'C:\Program Files\Microsoft SQL Server\MSSQL16SQLEXPRESS\MSSQL\DATA\P_2026.ndf'
+) TO FILEGROUP FG_2026;
+```
+With that we have created 4 different data files, mapped each of them to a filegroup for each year.
+
+After creating the stuffs, Let's check the metadata
+```sql
+SELECT
+   fg.name AS fileGroupName,
+   mf.name AS logicalFileName,
+   mf.physical_name AS physicalFilePath,
+   mf.size/128 AS sizeInMB
+FROM sys.filegroups fg
+JOIN sys.master_files mf ON fg.data_space_id = mf.data_space_id
+WHERE mf.database_id = DB_ID('SalesDB');
+```
+All the data information could be found inside the ```sys.master_files``` table.
+| fileGroupName | logicalFileName | physicalFilePath | sizeInMB |
+|---------------|-----------------|------------------|----------|
+| PRIMARY       | SalesDB         | C:\Program File..| 72       |
+| FG_2023       | P_2023          | C:\Program File..| 8        |
+| FG_2024       | P_2024          | C:\Program File..| 8        |
+| FG_2025       | P_2025          | C:\Program File..| 8        |
+| FG_2026       | P_2026          | C:\Program File..| 8        |
+
+</details>
+<!----------------------------------------->
+<details>
+  <summary>Building Partitions <b>#4 Create Partition Scheme</b> </summary>
+
+Now, We are here at last step where we define the **function Scheme**.
+
+<img width="350" height="200" alt="image" src="https://github.com/user-attachments/assets/cd64519f-63fa-4f67-8388-fd4168087b51" />
+
+Till here, we have defined How to divide our data into multiple partitions and we have prepared all the data files and file groups.
+
+But What is missing is connection. **How to connect those partitions to the file groups ?**
+- We can do that by using **Partition Scheme**.
+- All what we have to do define which partition is belongs ro which file group.
+- So, We can map partition 1 to FileGroup 2023, with that all the data of 2023 and earlier will go to file group 2023.
+- Similar way we map each partition to their correct file group like  partition 2 to FileGroup 2024, and partition 3 to filegroup 2025 and so on. If we don't do this, we will get error in SQL.
+
+<img width="350" height="250" alt="image" src="https://github.com/user-attachments/assets/7e33b739-ac1e-4440-9e90-2eae19b4af21" />
+
+Once we build partition Scheme then we can have all the component ready in order to have partitions in our table.
+
+
+Summary : <br/>
+- **Partition Functions** decides on How to split the data into multiple partitions?
+- **Partition Scheme** maps a partition to a fileGroup.
+- **FileGroups** are like folders in order to oraganize the data file.
+- Each fileGroup has one or more **data files** where actual data is stored physically
+
+So, initially It looks little bit complicated but as we understand each layer then it's easier to build partitions.
+
+Let's build Partition in SQL
+```sql
+-- Step 4: Create Partition Scheme
+
+CREATE PARTITION SCHEME schemePartitionByYear
+AS PARTITION partitionByYear
+TO (FG_2023, FG_2024, FG_2025, FG_2026)
+--order of FileGroups is very important here
+```
+> Note : Sort the Filegroups according to the result of the Function's Partitions.
+
+> Note : 3 Boundaries == 4 Partitions == 4 FileGroups
+
+Sometime as we create functions may be we make mistake that we don't know how much partitions SQL is going to create, like here in our example we have 3 boundaries so SQL will create 4 partitions.
+
+So, if we provide less FileGroups than partitions are being created by SQL. It will throw an error. That's bcuz we have 3 boundaries so obviously 4 partitions will be there and we need 4 filegroups.
+```sql
+CREATE PARTITION SCHEME schemePartitionByYear
+AS PARTITION partitionByYear
+TO (FG_2023, FG_2024, FG_2025)
+```
+
+Also SQL doesn't check whether you are mapping the partitions in correct filegroups or not. So order of filegroups is very important in order to map it correctly.
+
+As usual after creating the Partition Scheme, check whether it is correct ot not?
+```sql
+-- Query lists all partitions Scheme
+SELECT
+    ps.name AS partitionSchemeName,
+    pf.name AS partitionFunctionName,
+    dds.destination_id AS partitionNumber,
+    fg.name AS fileGroupName
+FROM  sys.partition_schemes ps
+JOIN sys.partitions_functions pf ON ps.function_id = pf.function_id
+JOIN sys.destination_data_spaces dds ON ps.data_space_id = dds.partition_scheme_id
+JOIN sys.filegroups fg ON dds.data_space_id = fg.data_space_id
+```
+| partitionSchemeName   | partitionFunctionName | partitionNumber | fileGroupName |
+|-----------------------|-----------------------|-----------------|---------------|
+| schemePartitionByYear | partitionByYear       |  1              | FG_2023       |
+| schemePartitionByYear | partitionByYear       |  2              | FG_2024       |
+| schemePartitionByYear | partitionByYear       |  3              | FG_2025       |
+| schemePartitionByYear | partitionByYear       |  4              | FG_2026       |
+
+</details>
+<!---------------------------------------------->
+<details>
+  <summary>Building Partitions <b>#5 Create Partitioned Table</b> </summary>
+
+So far we have prepared all the layers. So setup is ready to be used in any Table. <br/>
+We have :
+- Partition Functions
+- Partition Scheme
+- Filegroups
+- Datafiles
+So, Everything is ready but still we're not using it. The logic is just exist and the files are empty. Now what we have to do is **Create a table but not normal table, it's a Partition Table**
+
+Let's create a partition table in SQL
+```sql
+-- Step 5: Create the Partition Table
+
+CREATE TABLE Sales.orders_partitions
+(
+   order_id INT,
+   order_date DATE,
+   sales INT
+) ON schemePartitionByYear (order_date)
+```
+With that we have created a partition table.
+
+Now let's insert the data in our newly created partition table.
+```sql
+INSERT INTO Sales.orders_partitions VALUES (1, '2023-05-15', 100);
+
+SELECT * FROM Sales.orders_partitions;
+```
+Let's check in which partition the SQL inserted this record to check whether our partition is working fine or not.
+```sql
+SELECT
+    p.partition_number AS partitionNumber,
+    f.name AS partitionFilegroup,
+    p.rows AS numberOfRows
+FROM sys.partitions p
+JOIN sys.destination_data_spaces dds ON p.partition_number = dds.destination_id
+JOIN sys.filegroups f ON dds.data_space_id = f.data_space_id
+WHERE OBJECT_NAME(p.object_id) = 'orders_partitions';
+```
+| partitionNumber | partitionFilegroup | numberOfRows |
+|-----------------|--------------------|--------------|
+| 1               | FG_2023            | 1            |
+| 2               | FG_2024            | 0            |
+| 3               | FG_2025            | 0            |
+| 4               | FG_2026            | 0            |
+
+With that we make sure that our partition function and the logic we built is working correctly.
+
+Now we can insert new data and we can check.
+```sql
+INSERT INTO Sales.orders_partitions VALUES (1, '2023-05-15', 100);
+INSERT INTO Sales.orders_partitions VALUES (2, '2024-07-20', 150);
+INSERT INTO Sales.orders_partitions VALUES (3, '2025-12-31', 100);
+INSERT INTO Sales.orders_partitions VALUES (4, '2026-01-01', 550);
+INSERT INTO Sales.orders_partitions VALUES (5, '2026-05-15', 500);
+```
+Also It's important to check whether boundaries are working correctly or not so that the expectation of logic meet.
+
+If we go to Object Explorer > Storage > Partition Schemes | Partition Functions info which gives us direct info instead of querying the metadata.
+
+</details>
+
+This feels a lot of work but It's fun because for the first time in database It feels like we are controlling stuffs. Otherwise usually in database everything is like behind the scenes and we don't know what's going on like where the files are stored, etc etc. There are a lot of abstraction in database but here we're uncovering by getting deep into databases and controlling, managing all those files which gives us freedom and flexibility.
+<!-------------Creating partition table------------------>
+<details>
+  <summary>SQL Partitioning <b>Everything is Connected</b> </summary>
+
+Let's summarize How everything is connected together ?
+
+So, we have a ***Table*** then we specify for SQL that It is connected to ***Partition Scheme*** and in the partition scheme, we have everything connected. It is linked to a specific ***Partition Function***. and there we have ***Partitions*** and at the same time it is connected to ***Filegroups*** and the Filegroups are connected to the ***Data Files***
+
+As we can see all those layers and elements are connected to together.
+
+<img width="500" height="300" alt="image" src="https://github.com/user-attachments/assets/83ecee7a-a095-4062-b14c-22740fc1d132" />
+
+Now let's see how this works.
+
+So, we have inserted the last day of 2025, first thing happens here is partition function is going to decide to which partition it belongs to. So as we can see the data we are inserting here is boundary value, and we define boundary as left, so It will target the left partition i.e. partition 3. And then partition scheme is connected to the right file group and in this case filegroup-2025 and we have only one file in this file group so it will go the correct datafile. And in the datafile SQL is going to store this row which we inserted. So That's it. Isn't it prettry easy?
+
+
+</details>
+<!-----------------How partition works----------->
+<details>
+  <summary>Partitioned Table <b>The Performance</b> </summary>
+
+This is very important part, where we have to understand how the partition improves the performance of our query?
+
+We can do that by checking Execution Plan.
+
+In order to compare the behivor with and without partition what we have to do is create a mirror table without partition of our table.
+```sql
+SELECT *
+INTO Sales.orders_without_partitions
+FROM Sales.orders_partitions;
+```
+Now write the same query on both tables and compare the execution plan of both.
+```sql
+SELECT *
+FROM Sales.orders_without_partitions
+WHERE order_date = '2026-01-01';
+
+SELECT *
+FROM Sales.orders_partitions
+WHERE order_date = '2026-01-01';
+```
+In order to see execution plan make sure to activate in like the toolbar and select the execution plan type like actual execution plan and execute it.
+Now we have a new tab in the output beside Results, Messages i.e. Execution plan.
+Right Click on the Execution Plan' Table > Go to Properties | We can see a lot of details about execution plan.
+But What is interesting is the number of rows read, here in the execution plan of without partition we are reading whole rows of the table while in the execution plan of partition table we're reading only rows of 2025 partitions.
+
+As we can see using the Partition, we reduced the number of Rows read by SQL Engine and CPU, input, output cost etc etc.
+
+Same way we can check data from 2 different partitions.
+```sql
+SELECT *
+FROM Sales.orders_without_partitions
+WHERE order_date IN ('2026-01-01', '2023-05-15');
+
+SELECT *
+FROM Sales.orders_partitions
+WHERE order_date IN ('2026-01-01', '2023-05-15');
+```
+
+As we can see by using Partition we have optimize our queries and this has great impact on big tables. The number of resources and the number of reads is going to be reduced significantly.
+
+</details>
+
+That's all about the Partitions in SQL. It is amazing and we can use it not only in database but in many other data platforms and tools where we can divide huge data in order to optimize the performance.
 
 <!----------------Partitions----------------->
 
 
 ## 10.3 Performance Tips
 
+Here, We will see the how experts who work in SQL Data Projects uses the best practices, tips and Tricks that boost the performance in SQL Queries.
+
 <details>
-  <summary> <b>Performance Tips </b> </summary>
+  <summary> 30 X <b>Performance Tips </b> </summary>
+
+
+
 </details>
 <!---------------Performance Tips------------------>
 
