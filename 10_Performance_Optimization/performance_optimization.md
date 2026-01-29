@@ -2465,7 +2465,11 @@ As we can see all those layers and elements are connected to together.
 
 Now let's see how this works.
 
-So, we have inserted the last day of 2025, first thing happens here is partition function is going to decide to which partition it belongs to. So as we can see the data we are inserting here is boundary value, and we define boundary as left, so It will target the left partition i.e. partition 3. And then partition scheme is connected to the right file group and in this case filegroup-2025 and we have only one file in this file group so it will go the correct datafile. And in the datafile SQL is going to store this row which we inserted. So That's it. Isn't it prettry easy?
+So, we have inserted the last day of 2025, first thing happens here is partition function is going to decide to which partition it belongs to. So as we can see the data we are inserting here is boundary value, and we define boundary as left, so It will target the left partition i.e. partition 3. And then partition scheme is connected to the right file group and in this case filegroup-2025 and we have only one file in this file group so it will go the correct datafile. And in the datafile SQL is going to store this row which we inserted. So That's it. Isn't it pretty easy?
+
+**Partitioning + Indexing**
+
+<img width="500" height="350" alt="image" src="https://github.com/user-attachments/assets/57e2fe94-505d-491f-a4dd-1778cb96203f" />
 
 
 </details>
@@ -2525,16 +2529,872 @@ That's all about the Partitions in SQL. It is amazing and we can use it not only
 Here, We will see the how experts who work in SQL Data Projects uses the best practices, tips and Tricks that boost the performance in SQL Queries.
 
 <details>
-  <summary> 30 X <b>Performance Tips </b> </summary>
+  <summary> 30 Best Practices <b>Performance Tips </b> </summary>
 
+<details>
+  <summary> <b>The Golden Rule</b> </summary>
+  
+> For small-medium tables, the query optimizer may react similarly to different query styles.
+
+> Always check the Execution Plan to confirm performance improvements when optimizing your query.
+> - If there is no improvement, then just focus on readability.
+
+- SQL Optimizer responds differently for different sizes of tables. That means if we have small and medium tables like 1000-100000, we might not notice any performance differences while following the bext practices. That's bcuz the size of the data is very small. But if we have millions or more of records in table, we can immediately notice how things is faster if we follow the best practices.
+
+- Always test the performance using Execution Plan. e.g. : If 2 queries are returning the same result of data and It is recommended to check the Execution Plan, and if you notice there is no improvement then pick the one that is more easier to read and understand. Bcuz sometime if you following the best practices for the performance, the query might be like little bit more complicated. 
+
+</details>
+
+<details>
+  <summary>Best Practices <b>Fetching Data</b> </summary>
+
+> Tip 1 : **```SELECT``` only What is needed!**
+
+- Generally Developers select all the columns while querying. But you can't even think of any one scenario where you need all the columns of one table in one query. Here, you will get unnecessary columns and reading unnecessary information make the query slower.
+
+```sql
+-- ======================================
+-- Tip 1 : Select only what you need
+-- ======================================
+
+-- Bad Practice
+SELECT * FROM Sales.customers
+
+-- Good Practice
+SELECT customer_id, cust_name FROM Sales.customers
+```
+
+> Tip 2 : **Avoid unnecessary ```DISTINCT``` and ```ORDER BY```**
+
+- Many Developers as they write a lot of queries, they tend up by default adding always ```DISTINCT``` and ```ORDER BY``` for each query even though we don't need it really. If you ask them why ```DISTINCT``` they will say they're using it to remove duplicate but if table has no duplicates there is no need. Same goes for ```ORDER By```, in many situations we don't need to sort the data at all.
+
+- These operations ```DISTINCT``` removing the duplicates and ```ORDER BY``` sorting the data, they're very expensive operations in Execution Plan. They take a lot of resources and slow down the query.
+```sql
+-- ==================================================
+-- Tip 2 : Avoid unnecessary DISTINCT and ORDER BY
+-- ==================================================
+
+-- Bad Practice
+SELECT DISTINCT
+    customer_id,
+    cust_name
+FROM Sales.customers
+ORDER BY cust_name
+
+-- Good Practice
+SELECT 
+    customer_id,
+    cust_name
+FROM Sales.customers
+```
+
+> Tip 3 : **For Exploration purpose, Limit Rows!**
+
+- Sometime if you're working with new database and if you would like to explore the tables, just to have a quick peek in order to see the content of the table. And table has millions of rows then you'll be consuming a lot of resources. That's why use Limit in order to exploring the table.
+```sql
+-- ==================================================
+-- Tip 3 : For Exploration Purpose, Limits Rows!
+-- ==================================================
+
+-- Bad Practice
+SELECT 
+    order_id,
+    order_date,
+    sales
+FROM Sales.orders
+
+-- Good Practice
+SELECT TOP 10
+    order_id,
+    order_date,
+    sales
+FROM Sales.orders
+-- or
+SELECT 
+    order_id,
+    order_date,
+    sales
+FROM Sales.orders limit 10
+
+```
+</details>
+
+<details>
+  <summary>Best Practices <b>Filtering Data</b> </summary>
+
+How to optimize the filtering in SQL.
+
+> Tip 4 : ** Create nonclustered Index on frequently used Columns in ```WHERE``` clause**
+
+- Check you query and if you're using a column very frequently filtering the data then it makes sense to create a nonclustered Index for the column in order to improve the performance of your query.
+
+```sql
+-- ==============================================================================
+-- Tip 4 : Create nonclustered Index on frequently used columns in WHERE clause
+-- ==============================================================================
+
+-- Bad Practice
+SELECT * FROM Sales.orders WHERE order_status = 'Delivered'
+
+-- Good Practice
+CREATE NONCLUSTERED INDEX idx_orders_orderStatus ON Sales.orders(order_status);
+
+SELECT * FROM Sales.orders WHERE order_status = 'Delivered'
+```
+
+> Tip 5 : **Avoid applying functions to columns in ```WHERE``` clauses**
+
+- Usually what most developers do is tranform the column before filtering the data. e.g : applying the function ```LOWER(order_status)``` bcuz we're searching for the value 'delivered' and we're not sure about the values in the table whether it's in Uppercase or lowecase or CamelNotationCase but in order to make sure we're applying the lower function. Of course This will work but Here we have an index on the order_status column and now we're applying function to it. So what will happen is Functions on columns can block index usage. That means the whole index is useless as SQL is not using it.
+- That's why it is considered as bad practice. Instead of that good practice is that not use any function on column and write the exactly the value that is used inside the data. With that SQL will use the Index we created and speed up the performance.
+
+> **Note : Functions on Columns can block index usage** 
+```sql
+-- ==============================================================================
+-- Tip 5 : Avoid applying functions to columns in WHERE clauses
+-- ==============================================================================
+
+-- Bad Practice
+SELECT * FROM Sales.orders WHERE LOWER(order_status) = 'delivered'
+
+-- Good Practice
+SELECT * FROM Sales.orders WHERE order_status = 'Delivered'
+
+-- Bad Practice if we have index on the column first_name
+SELECT *
+FROM Sales.customers
+WHERE SUBSTRING(first_name, 1, 1) = 'A'
+
+-- Good Practice
+SELECT *
+FROM Sales.customers
+WHERE first_name LIKE 'A%'
+
+-- Bad Practice if we have index on the column order_date
+SELECT *
+FROM Sales.order
+WHERE YEAR(order_date) = 2026
+
+-- Good Practice
+SELECT *
+FROM Sales.order
+WHERE order_date BETWEEN '2025-01-01' AND '2025-12-31'
+
+```
+- So, Try as much you can  to avoid the functions in ```WHERE``` clause in order to get index working and speed up performance if the column has index. In many scenario we have alternate of function to workaround without transformation function.
+
+> Tip 6 : **Avoid using leading wildcards, as they prevent index usage**
+
+- If you know the last_name starts with 'Kumar' then why to use ```%Kumar%``` leading wildcard rather use ```Kumar%``` this will not avoid using the index but ```%Kumar%``` will avoid using the index.
+```sql
+-- ==============================================================================
+-- Tip 5 : Avoid using leading wildcards as they prevent index usage
+-- ==============================================================================
+
+-- Bad Practice
+SELECT *
+FROM Sales.customers
+WHERE last_name LIKE '%Gold%'
+
+-- Good Practice
+SELECT *
+FROM Sales.customers
+WHERE last_name LIKE 'Kumar%
+```
+
+> Tip 7 : **Use ```IN``` instead of multiple ```OR``` conditions**
+
+- ```OR``` operator is very evil for performance, try to avoid using it. It kills your perfromance whether it is in filters or Joins and so on.
+
+```sql
+-- =======================================
+-- Tip 7 : Use IN instead of multiple OR
+-- =======================================
+
+-- Bad Practice
+SELECT *
+FROM Sales.orders
+WHERE customer_id = 1 OR customer_id = 2 OR customer_id = 3
+
+-- Good Practice
+SELECT *
+FROM Sales.orders
+WHERE customer_id IN (1, 2, 3)
+-- This is not only looks nices but also better performance
+```
+
+</details>
+
+
+<details>
+  <summary>Best Practices <b>Joining Data</b> </summary>
+
+How to optimize JOINing table.
+
+> Tip 8 : **Understand the speed of ```JOINs``` and use ```INNER JOIN``` when it's possible.**
+
+- The best performance we get from ```INNER JOIN``` that's bcuz SQL has to work only on the matching rows that means efforts and processing time is better than other JOINs.
+- After ```INNER JOIN```, the ```LEFT JOIN``` and ```RIGHT JOIN``` they're slightly slower than ```INNER JOIN``` bcuz usually they process more data or rows than ```INNER JOIN``` bcuz SQL has to work not only with matching rows but also the unmatching rows which of one table.
+- The worst performance we get from is ```OUTER JOIN``` that's bcuz SQL has to work with biggest numbero of rows compared to other types. It presents unmatching rows from LEFT and from RIGHT tables. 
+
+```sql
+-- ========================================================================
+-- Tip 8 : Understand the speed of Joins and use INNER JOIN when possible
+-- ========================================================================
+
+-- Best Performance
+SELECT
+    c.name, o.order_id
+FROM Sales.customers c
+INNER JOIN Sales.orders o ON c.customer_id = o.customer_id
+
+-- Slighly Slower Performance
+SELECT
+    c.name, o.order_id
+FROM Sales.customers c
+LEFT JOIN Sales.orders o ON c.customer_id = o.customer_id
+
+SELECT
+    c.name, o.order_id
+FROM Sales.customers c
+RIGHT JOIN Sales.orders o ON c.customer_id = o.customer_id
+
+-- Worst Performance
+SELECT
+    c.name, o.order_id
+FROM Sales.customers c
+OUTER JOIN Sales.orders o ON c.customer_id = o.customer_id
+```
+
+> Tip 9 : **Use explicit JOIN(ANSI Join) instead of Implicit Join(non-ANSI Join)**
+
+```sql
+-================================================================================
+-- Tip 9 : Use explicit JOIN (ANSI Join) instead of Implicit JOIN(non-ANSI Join)
+-================================================================================
+
+-- Bad Practice
+SELECT
+    o.order_id, c.name
+FROM Sales.customers c, Sales.orders o
+WHERE c.customer_id = o.customer_id
+-- This was the old JOIN(non-ANSI or Implicit)
+-- If we have complex join, It is very hard and confusing to use this non-ANSI Join
+
+-- Good Practice
+SELECT
+    o.order_id, c.name
+FROM Sales.customers c
+INNER JOIN Sales.orders o
+ON c.customer_id = o.customer_id
+This is the normal modern JOIN(ANSI or Explicit)
+```
+
+> Tip 10 : **Ensure that the columns used in the ```ON``` claused are indexed.**
+
+- Here, we have to make sure both of those columns has an index bcuz Indexes speed up the lookup process. Without Index, SQL do a full table scan in order to find a match and that's really slow if we have big tables.
+
+```sql
+-- ============================================================
+-- Tip 10 : Make sure to Index the columns used in the ON clause
+-- ============================================================
+
+-- Bad Practice
+SELECT
+    c.name,
+    o.order_id
+FROM Sales.customers c
+INNER JOIN Sales.orders o
+ON c.customer_id = o.customer_id
+
+-- Good Practice
+CREATE NONCLUSTERED INDEX idx_customers_custid ON Sales.customers (customer_id);
+CREATE NONCLUSTERED INDEX idx_orders_custid ON Sales.orders (customer_id);
+```
+
+> Tip 11 : **Filter before JOINing (Big tables)**
+
+- It depends, what and how you need. It's better to filter the data before joining. We have 3 different scenario that deliver the same result but the performance is differ, the best performance we get when we filter before Join.
+- It can be doneby using **SUBQUERY** and also we can do this by using **CTE** and then join the result of it with table.
+- About the performance, if the query is not complex and table don't have huge data, although 3 queries delivered same result and same performance but when the tables are huge there will be huge difference in their performances and the best is by filter before join.
+
+```sql
+--===========================================================
+-- Tip 11 : Filter before Joining Big tables.
+--===========================================================
+
+-- Filter After JOIN (WHERE)
+SELECT c.name, o.order_id
+FROM Sales.customers c
+INNER JOIN Sales.orders o
+ON c.customer_id = o.customer_id
+WHERE o.order_status = 'Delivered'
+
+-- Filter During JOIN (ON)
+SELECT c.name, o.order_id
+FROM Sales.customers c
+INNER JOIN Sales.orders o
+ON c.customer_id = o.customer_id AND o.order_status = 'Delivered'
+
+-- Filter Before JOIN (SUBQUERY/CTEs)
+SELECT c.name, o.order_id
+FROM Sales.customers c
+INNER JOIN  (SELECT order_id, customer_id FROM Sales.orders WHERE order_status = 'Delivered') o
+ON c.customer_id = o.customer_id
+```
+
+> **Note : SQL is smart enough to use the correct way in Execution Plan**. So whenever we put filter after JOIN SQL make it before internally behind the scene.
+
+- So, If you don't have the complex query or big tables, go with the one that suits you bcuz SQL internally behind the scene. It is recommended to go with **Filter After Join for small and medium size tables**. But **if you have big table and complex query go with best practice is Filter Before JOIN**
+
+> Tip : **Try to isolate the preparation step in a CTE or Subquery** before joining with any other tables.
+> - This do help in many scenarios where we have big tables in the project and that's because the execution plan is better when we isolate and prepare the data before joing it.
+
+
+> Tip 12 : **Aggregate before JOINing big tables**
+
+- It is special case to improve the performance of the query. **Best Practice for Small-Medium Tables is Grouping and Joining** bcuz It's easier to understand and have same performance as Aggregate before Join. But if table is big then **Best Practice for Big tables, Pre-aggregated Subquery/CTE** and **Avoid using the Correlated Subquery**
+
+```sql
+-- ================================================
+-- Tip 12 : Aggregate before JOINing big tables
+-- ================================================
+
+-- Best Practice for Small-Medium Tables
+-- Grouping and Joining
+SELECT
+     c.customer_id,
+     c.customer_name,
+     COUNT(o.order_id) AS order_count
+FROM Sales.customers c
+INNER JOIN Sales.orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.customer_name
+
+-- Best Practice for Big tables
+-- Pre-aggregated Subquery/CTE
+SELECT
+     c.customer_id,
+     c.customer_name,
+     o.order_count
+FROM Sales.customers c
+INNER JOIN (SELECT customer_id, COUNT(order_id) AS order_count FROM Sales.orders GROUP BY customer_id) o
+ON c.customer_id = o.customer_id
+
+-- Avoid using the Correlated Subquery
+-- Correlated Subquery
+SELECT
+     c.customer_id,
+     c.customer_name,
+     (SELECT COUNT(order_id) FROM Sales.orders o WHERE o.customer_id = c.customer_id) AS order_count
+FROM Sales.customers c
+```
+- Although, all three of the same deliver the same result but question is which one has the best performances?
+
+- Correlated query has the worst performances. So **always avoid the correlated Subquery**. that's because SQL has to execute aggregation for every row individually which takes long time.
+
+> Tip 13 : **Use ```UNION``` instead of ```OR``` while JOINing tables**
+
+- ```OR``` operator here in this case is performance Killer, try to avoid it while Join. bcuz It has problems like It avoids using Indexes, it creates loop Joins and so on.
+- In order to get the same result we can split the join. and them merge the results using ```UNION```. It sounds like bigger query and too much for SQL but It will give better performance than using the ```OR```
+```sql
+-- ======================================================
+-- Tip 13 : Use UNION instead of OR while joining tables
+-- ======================================================
+
+-- Bad Practice
+SELECT o.order_id, c.customer_name
+FROM Sales.customers c
+INNER JOIN Sales.orders o
+ON c.customer_id = o.customer_id OR c.customer_id = o.sales_personId
+
+-- Good Practice
+SELECT o.order_id, c.customer_name
+FROM Sales.customers c
+INNER JOIN Sales.orders o
+ON c.customer_id = o.customer_id 
+UNION
+SELECT o.order_id, c.customer_name
+FROM Sales.customers c
+INNER JOIN Sales.orders o
+ON c.customer_id = o.sales_personId
+```
+
+> Tip 14 : **Check for ```Nested Loops``` and use ```SQL HINTS``` when necessary.**
+
+- Imagine we have big huge tables and we're joinint them. If we check the Execution plan, we must always check JOIN Type e.g. If it's using the Nested Loop, which is okay in case of small-medium tables but if we have big tables and SQL is still using the Nested Loop for some reason then this is alerting and we have to do something.
+
+- In order to change this, what we can do is use the SQL HINTS in order to force SQL to use ```HASH JOIN```.
+
+- ```HASH JOIN``` is really good if we have a big table is joing with a small table. When you execute with SQL Hints which forced SQL to use HASH JOIN and when you check the Execution Plan has been forced that's why now It will use HASH JOIN instead of NESTED Loop. 
+
+- Again if before using SQL HINTS evaluate, if you're using two small tables, don't bother but if there is any big table you're joing with it and SQL doing Nested Loop which is very slow due to a lot of iteration. So, to avoid it force SQL to use HASH JOIN by SQL HINTS
+```sql
+-- =====================================================================
+-- Tip 14 : Check for the Nested Loops and use SQL HINTS when necessary
+-- =====================================================================
+
+-- Bad Practice
+SELECT o.order_id, c.customer_name
+FROM Sales.customers c
+INNER JOIN Sales.orders o
+ON c.customer_id = o.customer_id
+
+-- Good Practice for Having Big table and small table joins
+SELECT o.order_id, c.customer_name
+FROM Sales.customers c
+INNER JOIN Sales.orders o
+ON c.customer_id = o.customer_id
+OPTION (HASH JOIN)
+```
+
+
+> Tip 15 : **Use ```UNION ALL``` instead of using ```UNION``` if duplicates are acceptable.**
+
+- If there are no duplicates or if duplicates are acceptable then use ```UNION ALL``` instead of ```UNION``` that's bcuz ```UNION``` needs more time to be executed. SQL has to check row by row whether there is duplicates or not which usually takes longer time than ```UNION ALL``` in which SQL doesn't check whether there is any duplicate or not. It simply merge the data.
+
+```sql
+-- ==========================================================================
+-- Tip 15 : Use UNION ALL instead of using UNION | duplicates are acceptable
+-- ==========================================================================
+
+-- Bad Practice
+SELECT customer_id FROM Sales.orders
+UNION
+SELECT customer_id FROM Sales.orders_archive
+
+-- Good Practice
+SELECT customer_id FROM Sales.orders
+UNION ALL
+SELECT customer_id FROM Sales.orders_archive
+```
+
+> Tip 16 : **Use ```UNION ALL``` instead of using ```UNION``` if duplicates are not acceptable.**
+
+- This is little bit trick, if you don't want duplicates then use ```UNION ALL``` together with ```DISTINCT``` instead of ```UNION```. So, It will merge the data and remove the duplicates.
+- Here, using ```UNION``` is okay if we have small-medium size tables but when we have big tables which contains huge data like millions of rows then the performance will be slower that's why for bigger table use ```UNION ALL``` and then use ```DISTINCT```.
+- Again always check and make sure the SQL Execution plan is getting benefits from using the tips or not.
+
+```sql
+-- ==============================================================================
+-- Tip 16 : Use UNION ALL instead of using UNION | duplicates are nit acceptable
+-- ==============================================================================
+
+-- Bad Practice
+SELECT customer_id FROM Sales.orders
+UNION
+SELECT customer_id FROM Sales.orders_archive
+
+-- Good Practice
+SELECT DISTINCT customer_id FROM Sales.orders
+UNION ALL
+SELECT DISTINCT customer_id FROM Sales.orders_archive
+
+-- Best Practice
+SELECT DISTINCT customer_id
+FROM (SELECT customer_id FROM Sales.orders
+      UNION ALL
+     SELECT customer_id FROM Sales.orders_archive)
+```
 
 
 </details>
+
+<details>
+  <summary>Best Practices <b>AGGREGATING DATA</b> </summary>
+
+> Tip 17 : **Use columnStore Index for Aggregation on large big table**
+
+- Like large huge table are fact tables where we have millions of rows that's bcuz ColumnStore Index compress the data, so the size of the data is going to be smaller and aggregation will be superfast bcuz we're selecting only relevant information instead of all rows and all columns. So, It is perfect set to use columnStore Index for Aggregation on big large table.
+
+```sql
+-- ===============================================================
+-- Tip 17 : Use ColumnStore Index for Aggregations on large Table
+-- ===============================================================
+
+SELECT
+    customer_id,
+    COUNT(order_id) AS order_count
+FROM Sales.orders
+GROUP BY customer_id
+
+CREATE CLUSTERED COLUMNSTORE INDEX idx_orders_cs ON Sales.orders;
+```
+
+> Tip 18 : **Pre-Aggregate data and store it in a new table for Reposrting**
+
+- Let's say we have a aggregation query on a big huge large table where we're aggregating data and this query is taking long time 5-10 minutes. But the problem is we want to show the result as report to manager or during a meeting to client. It's really bad if manager or client has ho wait for 5 minutes in a meeting until the query is done.
+- So, Here best practice is to have a new table which store the result of the query which is taking longer time.
+- Now we just have to query the new table which stores the result already of the query which takes longer time. of course the new table will be very fast as we're just running SELECT on it which contains just result which is best for reports to show in a meeting.
+
+```sql
+-- ===========================================================
+-- Tip 18 : Pre-Aggregate data and store it in a new table for Reposrting
+-- ===========================================================
+
+-- Best Practice
+SELECT
+    MONTH(order_date) AS order_year,
+    SUM(sales) AS total_sales
+INTO Sales.order_reporting
+FROM Sales.orders
+GROUP BY MONTH(order_date)
+
+DROP TABLE IF EXISTS Sales.orders_reporting;
+CREATE TABLE Sales.orders_reporting USING AS
+SELECT
+    MONTH(order_date) AS order_year,
+    SUM(sales) AS total_sales
+FROM Sales.orders
+GROUP BY MONTH(order_date)
+```
+- If we have a big table on which a query which is taking longer time, we can insert the result of this query in a new table in order to use it later for reporting but one thing here is to make sure, always update this new table before every reporting.
+
+</details>
+
+<details>
+  <summary>Best Practice <b>Subqueries</b> </summary>
+
+If we want to show the orders but only from the customers from USA. <br/>
+There are different ways to do this.
+```sql
+-- JOIN ( Best Practice if the perfromance is similar to EXISTS )
+SELECT
+    o.order_id,
+    o.sales
+FROM Sales.orders o
+INNER JOIN Sales.customers c
+ON o.customer_id = c.customer_id
+WHERE c.country = 'USA'
+
+-- EXISTS ( Best Practice : Use it for large tables )
+SELECT
+  o.order_id,
+  o.sales
+FROM Sales.orders o
+WHERE EXISTS (SELECT 1 FROM Sales.customers c WHERE c.customer_id = o.customer_id AND c.country = 'USA')
+
+-- IN (Bad Practice when it comes to big tables)
+SELECT
+  o.order_id,
+  o.sales
+FROM Sales.orders o
+WHERE o.customer_id IN (SELECT customer_id FROM Sales.customers WHERE country = 'USA')
+```
+
+Que is **```JOIN``` vs ```EXISTS``` vs ```IN```** which one better ?
+- There're debates around it.
+- Everyone is agrees on "Don't use ```IN``` operator".We're talking when it comes to big large tables bcuz ```IN``` operators processess and evalautes all rows. It lacks an early exit mechanism.
+- Conflict is between ```JOIN``` and ```EXISTS```.  They're very similar for medium tables like 1000 to 100000 rows. But still we have to test and check the Execution Plan and if both are identical and giving the same result go with ```JOIN``` that's bcuz it's easier to write than ```EXISTS```.
+- But sometimes we get better performance using ```EXISTS``` So, It is best practice is use ```EXISTS``` for large huge tables. That's bcuz SQL has only to check the existence of data from the subquery on the other hand ```INNER JOIN``` SQL has to do matching between 2 tables. SO, It evaluates all matching records.Also sometime SQL has to deal with more rows bcuz there we might introduce duplicates as JOINing tables which will not happens using ```EXISTS```  
+
+Note : ```EXISTS``` is better than ```JOIN``` bcuz It stops at first match and avoid data duplication.
+
+> Tipe 20 : **Avoid Reduntant logic in the query.**
+
+- This happens a lot when we have lots of subqueries. When you analyze you will see redundancies.
+
+```sql
+--================================================
+-- Tip 20 : Avoid Redundant Logic in your query.
+--================================================
+
+-- Bad Practice (Sacnning the table 4 times)
+SELECT employee_id, employee_name, 'Above Average' status FROM Sales.employees WHERE salary > (SELECT AVG(salary) FROM Sales.employees)
+UNION ALL
+SELECT employee_id, employee_name, 'below Average' status FROM Sales.employees WHERE salary < (SELECT AVG(salary) FROM Sales.employees)
+
+-- We can use CTE like calculate the avg in CTE and use it multiple times and then use it but there is better option than that
+
+-- Good Practice
+SELECT
+    employee_id,
+    employee_name,
+    CASE
+        WHEN salary > AVG(salary) OVER() THEN 'Above Average'
+        WHEN salary < AVG(salary) OVER() THEN 'Below Average'
+        ELSE 'Average'
+    END AS status
+FROM Sales.employees
+-- NOTE : Spot redundant queries ? Review and fix them.
+
+-- Best Practice (scanning the table only 1 time and also calculating avg only once
+SELECT
+    employee_id,
+    employee_name, 
+    CASE
+        WHEN salary > avgSalary THEN 'Above Average'
+        WHEN salary < avgSalary THEN 'Below Average'
+        ELSE 'Average'
+    END AS status
+FROM (SELECT
+          employee_id,
+          employee_name,
+          salary,
+          AVG(salary) OVER() as avgSalary
+      FROM Sales.employees
+     )      
+```
+As we can see optimizing the query is not always using the indexes and partitions. It's also about using Best Practices.
+
+</details>
+
+<details>
+  <summary>Best Practices <b>Creating Tables DDL</b> </summary>
+
+Best practices of DDL i.e. How to create tables. If we have poor deinition of the table this will have great impact on the performance of queries on this table.
+
+Always have best defintion of table while creating a table.
+
+> Tip 21 : **Avoid Data type ```VARCHAR``` and ```TEXT``` if it is possible**
+
+- ```VARCHAR``` and ```TEXT``` are one the worst data type in term of performance bcuz they consume a lot of resources when you do anything like Sorting the data by column, index on such columns they're expensive and cause a lot of problems like Data Fragmentations. So try as much as you can to avoid ```VARCHAR``` or ```TEXT``` if possible. Even ```TEXT``` is worst than the ```VARCHAR```.
+
+```sql
+-- =====================================================
+-- Tip 21 : Try to Avoid the Data type VARCHAR and TEXT
+-- =====================================================
+-- Bad Practice
+CREATE TABLE Sales.customerInfo
+(
+  customer_id INT,
+  first_name VARCHAR(MAX),
+  last_name TEXT,
+  country VARCHAR(255),
+  total_purchase FLOAT,
+  score VARCHAR(255),
+  birth_date VARCHAR(255),
+  employee_id INT,
+  CONSTRAINT FK_customerInfo_employee_ID FORIGN KEY(employee_id) REFERENCES Sales.employees(employee_id)
+)
+
+-- Good Practice
+CREATE TABLE Sales.customerInfo
+(
+  customer_id INT,
+  first_name VARCHAR(MAX),
+  last_name VARCHAR(50),
+  country VARCHAR(255),
+  total_purchase FLOAT,
+  score INT,
+  birth_date DATE,
+  employee_id INT,
+  CONSTRAINT FK_customerInfo_employee_ID FORIGN KEY(employee_id) REFERENCES Sales.employees(employee_id)
+)
+-- here we have saved some storage and also better performance.
+```
+- A lot of developers tends to use the ```VARCHAR```. Yes, It is easier to understand to make everything as ```VARCHAR``` instead of deciding whether it is ```INT``` or ```DATE```, ```FLOAT```. But this is lazy way, it cost you more when it comes to performance. 
+
+> Tip 22 : **Avoid ```(MAX)``` unnecessarily large lengths in data type**
+
+- ```VARCHAR(MAX)``` not only it wastes a lot of storage but also mislead the SQL by creating large indexes which is totally unnecessary bcuz the data we're putting inside it is very small than what we define ```(MAX)```. And large indexes are problematic bcuz they will slow down performance in inserting, updating and deleteing bcuz they upadte the indexes everytime.
+- So, It is really bad practice to blindly define everywhere ```(MAX)``` or 255. Give a chance to each column and predict a length for it.
+
+```sql
+-- ======================================================================
+-- Tip 22 : Try to Avoid (MAX) unnecessarily large lengths in data types
+-- ======================================================================
+
+-- Bad Practice
+CREATE TABLE Sales.customerInfo
+(
+  customer_id INT,
+  first_name VARCHAR(MAX),
+  last_name VARCHAR(50),
+  country VARCHAR(255),
+  total_purchase FLOAT,
+  score INT,
+  birth_date DATE,
+  employee_id INT,
+  CONSTRAINT FK_customerInfo_employee_ID FORIGN KEY(employee_id) REFERENCES Sales.employees(employee_id)
+)
+
+-- Good Practices
+CREATE TABLE Sales.customerInfo
+(
+  customer_id INT,
+  first_name VARCHAR(50),
+  last_name VARCHAR(50),
+  country VARCHAR(50),
+  total_purchase FLOAT,
+  score INT,
+  birth_date DATE,
+  employee_id INT,
+  CONSTRAINT FK_customerInfo_employee_ID FORIGN KEY(employee_id) REFERENCES Sales.employees(employee_id)
+)
+-- Note : Best practice is analyze the data of columns and predict the realistic size of each column.
+```
+
+> Tip 23 : **Use the ```NOT NULL``` constraint where applicable**
+
+- ```NOT NULL``` constraint is amazing.It has adavantages of using it, big advanatge is **Data Integrity** of the table which make sure no NULLs are inserted in a specific column.
+  
+- It is good practice is to use ```NOT NULL``` for imprioving the performance. bcuz we create an index on the columns which has the constraint ```NOT NULL``` we will get better index performance since SQL knows that there is no NULLs inside the B-Tree structure.
+
+- Also sometime we tend to apply the filter that a specific column value should not be ```NULL``` in that case if we define the table definition correctly then there is no need to have null in it.
+
+```sql
+-- ========================================================
+-- Tip 23 : Use the NOT NULL constraint where applicable
+-- ========================================================
+
+-- Bad Practices
+CREATE TABLE Sales.customerInfo
+(
+  customer_id INT NOT NULL,
+  first_name VARCHAR(50),
+  last_name VARCHAR(50),
+  country VARCHAR(50),
+  total_purchase FLOAT,
+  score INT,
+  birth_date DATE,
+  employee_id INT,
+  CONSTRAINT FK_customerInfo_employee_ID FORIGN KEY(employee_id) REFERENCES Sales.employees(employee_id)
+)
+
+-- Good Practice
+CREATE TABLE Sales.customerInfo
+(
+  customer_id INT , --any way we will convert it to primary key
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  country VARCHAR(50) NOT NULL,
+  total_purchase FLOAT,
+  score INT,
+  birth_date DATE,
+  employee_id INT,
+  CONSTRAINT FK_customerInfo_employee_ID FORIGN KEY(employee_id) REFERENCES Sales.employees(employee_id)
+)
+
+```
+
+> Tip 24 : Ensure all your table have a Clustered Primary Key
+
+- A clustered Primary key will help us in building Relationships between the table where we have ```PRIMARY KEYs``` and ```FOREIGN KEYs```. And we can join tables very easily based on those relationships.
+- Also Primary Keys are very important for the performances of the query.
+  
+- In SQL Server the default is going to be Clustered Index which is really good to have an index on the primary key bcuz when we do insert, update, delete operation It will help up by the look ups of joining the tables. So, there are performance benefits of having Primary Key. That's why we have to make sure all of our table must have a primary key
+
+```sql
+-- =======================================================================
+-- Tip 24 : Make sure in your table there must  be a clustered Primay Key
+-- =======================================================================
+
+-- Bad Practices
+CREATE TABLE Sales.customerInfo
+(
+  customer_id INT NOT NULL,
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  country VARCHAR(50) NOT NULL,
+  total_purchase FLOAT,
+  score INT,
+  birth_date DATE,
+  employee_id INT,
+  CONSTRAINT FK_customerInfo_employee_ID FORIGN KEY(employee_id) REFERENCES Sales.employees(employee_id)
+)
+
+-- Good Practice
+CREATE TABLE Sales.customerInfo
+(
+  customer_id INT PRIMARY KEY CLUSTERED, 
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  country VARCHAR(50) NOT NULL,
+  total_purchase FLOAT,
+  score INT,
+  birth_date DATE,
+  employee_id INT,
+  CONSTRAINT FK_customerInfo_employee_ID FORIGN KEY(employee_id) REFERENCES Sales.employees(employee_id)
+)
+```
+
+> Tip 25 : **Create NonClustered Index for Foreign Keys that are used frequently.**
+
+- It's not only about Primary Key, we also have to take care about Foreign Keys.
+- Foreign Keys are important in order to connect and joins two tables and we use it frequently. Not only that sometimes we also use Foreign Key in order to filter data.
+- If we create a NONCLUSTERED Index for Foreign Key, It will improve the performance.
+
+```sql
+-- =============================================================
+-- Tip 25 : Create NonClustered Index for Foreign Keys that are used frequently
+-- =============================================================
+-- Good Practice
+CREATE TABLE Sales.customerInfo
+(
+  customer_id INT PRIMARY KEY CLUSTERED, 
+  first_name VARCHAR(50) NOT NULL,
+  last_name VARCHAR(50) NOT NULL,
+  country VARCHAR(50) NOT NULL,
+  total_purchase FLOAT,
+  score INT,
+  birth_date DATE,
+  employee_id INT,
+  CONSTRAINT FK_customerInfo_employee_ID FORIGN KEY(employee_id) REFERENCES Sales.employees(employee_id)
+)
+
+CREATE NONCLUSTERED INDEX idx_customerInfo_empid ON Sales.customerInfo(employee_id)
+-- Again make sure the foreign key is used frequently then only create a nonclustered Index
+```
+
+> Having a healthy DDL can improve the performance of the query.
+
+</details>
+
+<details>
+  <summary>Best Practices <b>Indexing</b> </summary>
+
+> Tip 26 : **Avoid Over Indexing**
+
+- Try to avoid Over Indexing bcuz too many indexes is going to slow down WRITE (Insert, update and delete) operations, READ operations as well as make SQL Engine confused to choose the right index while making the Execution Plan.
+
+> Tip 27 : **Monitor the usage of Indexes**
+
+- 90% of indexes that is being created usually are not used at all. SO, they are taking a lot of space, slowing down the perfermance. So drop un-used indexes in the system.
+
+> Tip 28 : **Update Statistics (Weekly)**
+
+- Another best practice is to have a regular job like may be weekly job. So first update the statistics regularly. As we insert new data, modifying data inside database, **the Statistics and metadata of our table** might get outdated and this is bad bcuz SQL Engine will not get optimal best Execution Plan for the queries which slow down the queries performance.
+- So, It is recommended to make sure that all the statistics are updated in order to have SQL Engine will have optimal Execution Plan.
+
+> Tip 29 : **Reorganize and Rebuild Indexes (Weekly)**
+
+- To make sure that we're preventing the **Data Fragmentations** in indexes. It is bad bcuz of it there will be a lot of unused spaces, order of the clustered Index will be not correct, weekly we do Rebuilding and Reorganizing all the Indexes.
+
+</details>
+
+<details>
+  <summary>Best Practices <b>Partitions</b> </summary>
+
+> Tip 30 : **Partition Large tables (facts) to improve perfromances**
+> - Next, **apply a columnStore Index for the best results**
+
+- If you're struggling with very large table in the project like Facts table which contains millions of data. It is recommended to use SQL Partitioning in order to divide the huge table into smaller partitions which is going to improve the performance while READ and WRITE operations.
+
+- Of course, we can apply columnStore Index on this partition table then we will get the best performance on these huge large tables.
+
+<img width="300" height="200" alt="image" src="https://github.com/user-attachments/assets/a539987d-f1eb-4d65-91b1-bc515b957b06" />
+
+</details>
+
+</details>
+
+<details>
+  <summary> Best Practices <b>Final Thoughts</b> </summary>
+
+> **Focus on writing clear queries**
+> - Easy to read
+> - Easy to understand
+> - Optimize performance only if needed.
+> - Always Test Using Execution Plan if there is any performance issue
+
+In smaller database, don't worry about the performances bcuz SQL Engine will anyway optimize and pick the best Execution Plan. So, focus only on the simple queries.
+
+If there is any performance problem, And you're creating Indexes and Partitions, Always test it using Execution Plan, Always compare the before and After using Execution plan. If you are gaining performance then only adopt otherwise not use index.
+</details>
+
+> As we can see optimizing the query is not always using the indexes and partitions. It's also about using Best Practices.
 <!---------------Performance Tips------------------>
 
 
-
-
-
-
-
+| < [Adavanced SQL Techniques](https://github.com/pawansinghfromindia/SQL/blob/main/09_Advanced_SQL_Techniques/advanced_sql_techniques.md) | **Indexes, Partitions, Performance Tips** | [SQL and AI]() > |
+|------------------------------|-------------------------------------------|----------------|
