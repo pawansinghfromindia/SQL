@@ -254,6 +254,10 @@ If we combine these 2 tables, Both Circles overlaped, there are 3 possibilities 
 | Right Join  :  All Rows(Everything) of Right table B + Only Matching of Left Table A| Right Anti Join : Only unmatching Rows of right table B + Nothing from left table A    |
 | Full Join   :  Everything of left & right, includes matching and unmatching ata     |                                                                                        |
 
+<img width="500" height="350" alt="image" src="https://github.com/user-attachments/assets/aedbfdb7-e827-4c9c-b01d-87c95e5ecfed" />
+
+<br/>
+
 **NO JOIN**
 
 Returns Data from Tables without combining them.
