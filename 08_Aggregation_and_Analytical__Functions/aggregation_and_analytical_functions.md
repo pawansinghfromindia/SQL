@@ -1789,6 +1789,7 @@ On the other hand Integer-based ranking is used to answers such questions like *
           FROM Sales.orders
      ) WHERE rankByProductSales = 1
 ```
+
 | Order_id | product_id | Sales | RowNumRank   | 
 |----------|------------|-------|--------------|
 | 8        | 101        | 90    |   1          | 
@@ -1930,6 +1931,7 @@ What if bucket size is odd, like
         FROM Sales.orders
 ```
 - First SQL will sort the data, then calculate the buckets which will be 10/1 = 10 & rank them in one bucket.
+
 |  Bucket  | Size | 10/1 = 10 | 10/2 = 5  | 10/3=3.33 ~4| 10/4=2.25 ~3|  
 | order_id | sales| oneBucket | twoBucket | threeBucket | fourBucket  |
 |----------|------|-----------|-----------|-------------|-------------|
