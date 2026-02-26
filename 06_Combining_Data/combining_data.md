@@ -910,6 +910,7 @@ Results :
  ### 🔻 How to choose Between JOIN Types?
 <details>
   <summary><b> Decision Tree to choose the right JOIN? </b></summary>
+
 - If you want to see results **Only Matching Data** between 2 tables -> **```INNER JOIN```**
 - If you want to see everything **All Rows** after joining 2 tables then we take different path :
   - If you want to all data from one table from **one side important** like **Main/Master table** -> **```LEFT JOIN```**
